@@ -136,14 +136,60 @@ These placeholders are not working credentials. Copy the exact PostgreSQL URI fr
 
 ### Changing the public link domain
 
-The public origin is configuration-driven. All newly generated managed QR destinations, short links, and digital-card addresses use `PUBLIC_BASE_URL`; no frontend source edit or rebuild is needed to change that hostname. For example, to move new links from `https://qr.example.com` to `https://go.example.com`:
+The public origin is configuration-driven. Generated managed QR addresses, tracked Code 128 addresses, short links, and digital-card addresses use `PUBLIC_BASE_URL`; no frontend source edit or rebuild is needed to change that hostname. For example, to move new links from `https://qr.example.com` to `https://go.example.com`:
 
 1. Add the new hostname in CloudPanel, point its DNS record to the same server, and issue its HTTPS certificate.
 2. Merge [`backend/deploy/cloudpanel/short-domain.locations.conf`](backend/deploy/cloudpanel/short-domain.locations.conf) into that hostname's Nginx server block. It routes `/r/` and `/c/` to FastAPI and returns 404 for unrelated paths.
-3. Set `PUBLIC_BASE_URL=https://go.example.com` in `backend/.env`. Keep `FRONTEND_URL` on the customer application domain. Include the real customer/admin origins in `CORS_ORIGINS`; the backend also permits the configured `PUBLIC_BASE_URL` for its hosted password-protected redirects.
-4. Restart FastAPI with `sudo systemctl restart turaqrcode` and verify `/api/ready`, a new editable QR redirect, a short link, and a business-card profile over HTTPS.
+3. Set `PUBLIC_BASE_URL=https://go.example.com` in `backend/.env`. Keep `FRONTEND_URL` on the customer application domain. Include the real customer/admin origins in `CORS_ORIGINS`. The configured public/customer origins are also trusted for CORS and protected-form requests. Any retained old link hostname that must accept password-form submissions must remain explicitly listed in `CORS_ORIGINS`.
+4. Run `.venv/bin/python -m app.manage check-deployment`, restart FastAPI with `sudo systemctl restart turaqrcode`, and verify `/api/ready`, a new editable QR redirect, a short link, a tracked barcode, and a business-card profile over HTTPS.
 
 This changes URLs generated from then on. A QR code already printed with the old hostname still points to that old hostname, so keep its DNS and redirect routes active or update/reprint the affected code before retiring the old domain. Choose the permanent hostname before distributing codes whenever possible.
+
+Linked business-card QR redirects resolve the card profile using the current configured public domain, including after a future domain change. This does not rewrite database records, alter user-entered external website destinations, or change downloaded image bytes. Explicitly customized QR destinations and mobile destinations are preserved. Password-protected QR and tracked barcode forms retain their scan channel across incorrect-password retries and successful redirects; short-link visits remain link clicks.
+
+### Fresh production data and URL preflight
+
+Development/demo data is not part of the production release. Use a separate, empty production Supabase project/database and set its PostgreSQL URI in the server's private `backend/.env`. Do not copy the development `.env`, `backend.env`, database backup, `.local`, test inventories, demo images, browser sessions, or sample-account scripts to production. `app.manage init` creates only the bootstrap administrator/default project and runs schema migrations; it does not populate demonstration QR codes, barcodes, links, or business cards. An existing database is never automatically emptied by deployment.
+
+Set final domains **before initialization and before generating anything intended for distribution**. Choose one of these layouts:
+
+| Setting | One customer/link hostname | Separate branded link hostname |
+|---|---|---|
+| `PUBLIC_BASE_URL` | `https://qr.example.com` | `https://go.example.com` |
+| `FRONTEND_URL` | `https://qr.example.com` | `https://qr.example.com` |
+| `CORS_ORIGINS` | `https://qr.example.com,https://admin.qr.example.com` | `https://qr.example.com,https://admin.qr.example.com` |
+| `COOKIE_SECURE` | `true` | `true` |
+| Customer/admin `VITE_API_URL` | Unset/blank; same-origin `/api/` proxy | Unset/blank; same-origin `/api/` proxy |
+
+`PUBLIC_BASE_URL`, `FRONTEND_URL`, and every `CORS_ORIGINS` entry must be an HTTP/HTTPS **origin**, not a page URL: no `/app`, `/api`, `/r`, `/c`, query, fragment, username/password, or wildcard. Trailing slashes, hostname case, and default ports are normalized. Invalid values stop startup rather than emitting malformed links. Generated addresses never use an incoming Host or forwarding header as their source of truth.
+
+Run this configuration check using the same private environment and interpreter as the service:
+
+```bash
+cd /home/tura/apps/TuraQRcode/backend
+.venv/bin/python -m app.manage check-deployment
+.venv/bin/python -m app.manage check
+.venv/bin/python -m app.manage init
+```
+
+`check-deployment` is read-only and does not connect to or change the database. It rejects insecure cookies, non-HTTPS production origins, loopback/private IPs, localhost domains, and an empty allowed-origin list. It prints only public URL settings and configuration diagnostics, never database credentials. Local development intentionally uses HTTP/loopback and is expected to fail this **production-only** check. `check` separately verifies PostgreSQL; DNS, certificate validity, proxy routing, and SMTP still need real server checks. Remove any legacy checkout-root `backend.env` from the production checkout: it is loaded after `backend/.env` and can override that file. Keep environment variables supplied by systemd consistent as they take precedence over both files.
+
+URL responsibilities after configuration:
+
+| Flow | Behavior |
+|---|---|
+| Dynamic QR and tracked barcode | Encode the configured `/r/{slug}` address and preserve `via=qr` / `via=barcode`; a visit redirects to the saved destination and records the appropriate channel. |
+| Short link | Uses the configured `/r/{slug}` address; ordinary short-link visits count as link clicks. |
+| Static QR and product/inventory barcode | Encode the user's actual URL/text/product value; neither the value nor its tracking behavior is changed by the hosting domain. |
+| Business card | Public profile and vCard use `/c/{slug}` on the configured public host; the linked managed QR resolves its profile against that host. |
+| Password, expiry, pause | Checked on the managed public endpoint before redirecting. Incorrect passwords do not record successful interactions. |
+| Mobile destination | The explicitly supplied mobile URL is preserved; it is not replaced with the application's domain. |
+| Password recovery | Uses `FRONTEND_URL/reset-password?token=...`, never the short-link-only host or request Host header. |
+| QR Scanner | Decodes on the device. Opening a managed URL produces its normal redirect event; merely reading an image does not record a server visit. |
+
+On a separate branded link site, install the `short-domain.locations.conf` fragment for `/r/` and `/c/`. The customer and admin sites must each proxy `/api/` to the same backend/database. Preserve path **and query string** when proxying; avoid rewrite rules that discard `via`, reset tokens, or aliases. Do not cache `/api/`, `/r/`, or `/c/` at Nginx/CDN level. Do not add an extra restrictive `form-action 'self'` CSP to protected `/r/` pages; it can block cross-site destination navigation after a password POST. Proxy to the API as shown, with no trailing slash on `proxy_pass http://127.0.0.1:8000;`.
+
+After the first deployment, generate fresh static/dynamic QR, a short link, a tracked Code 128, and a card. Decode the downloaded files and confirm that managed URLs contain the production hostname, never `localhost`, `127.0.0.1`, a LAN IP, or port 8000. Test public navigation in a signed-out browser and on a phone, incorrect/correct access passwords, desktop/mobile destinations, pause/expiry, profile/vCard links, and analytics channel counts. Test a recovery link against the customer domain after SMTP configuration. Record results before printing/distributing codes.
 
 If using the same Supabase database already initialized during development, its administrator/data remain present; `init` does not replace that administrator's password. For a new production database, set a private strong temporary bootstrap password rather than publishing a shared password in documentation.
 
@@ -166,6 +212,8 @@ cd /home/tura/apps/TuraQRcode/backend
 `init` applies migrations and creates the initial administrator only if missing. Later deployments normally use `app.manage migrate`. Do not recreate tables manually or delete the existing `tura` schema to update the application.
 
 If connection checking fails, fix the URI/password/SSL/network access before starting the service. Never run destructive test launchers against Supabase. Establish a protected Supabase backup/restore procedure before applying future migrations to valuable data.
+
+For a fresh production installation, first run the production-only URL preflight in section 6 and initialize the separate empty production database. Local demo accounts and generated records are intentionally not migrated.
 
 ## 8. Build both React applications
 
@@ -440,6 +488,8 @@ Replace `PREVIOUS_COMMIT` with the SHA recorded before the pull.
 If a deployment fails, leave the service stopped while investigating. Restore the previously retained customer/admin build artifacts, the recorded application revision, and its dependencies as appropriate. Use a reviewed checkout/deployment revision rather than blindly resetting a live worktree. Never delete `.env`, the Supabase database, or the `tura` schema to repair a deployment.
 
 Database migrations may change data or remove columns. Reverting Git does not revert PostgreSQL. Decide whether the previous application is compatible with the new schema; otherwise use your tested database restore procedure or a reviewed corrective migration. Do not blindly execute an Alembic downgrade against valuable production data.
+
+Retain a protected copy of the previous production environment as well as the commit and both `dist` builds. Keep production domain values when rolling back application code; never replace them with development defaults. If you deliberately roll back a domain setting, preserve DNS/TLS and `/r/`/`/c/` routing for every hostname already distributed, and keep password-form origins allowed. A code rollback cannot change the URL inside a printed image or reverse DNS/certificate changes. This redirect/configuration update introduces no schema migration, so its application rollback does not require an Alembic downgrade. Rerun `check-deployment` when the chosen revision includes that command, plus public redirect/profile/password checks, after restoring a revision.
 
 ## 15. Troubleshooting
 

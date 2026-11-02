@@ -1,6 +1,6 @@
 # TuraQRcode verification
 
-Executed on **29 October 2026** in `E:\TuraQRcode`.
+Initial verification was executed on **29 October 2026** in `E:\TuraQRcode`. The latest full backend and browser regression runs passed on **2 November 2026**; dated follow-up sections distinguish local tests from earlier live Supabase checks.
 
 ## Results
 
@@ -9,8 +9,8 @@ Executed on **29 October 2026** in `E:\TuraQRcode`.
 | Application layout | `backend`, `admin`, and `frontend` are independently runnable/buildable application folders. Subsequently consolidated under one root Git repository for the requested GitHub remote, with root README/deployment documentation. |
 | Customer production build | Passed: TypeScript and Vite |
 | Administrator production build | Passed: TypeScript and Vite |
-| Backend/PostgreSQL test suite | Full rerun: 234 passed against isolated local PostgreSQL in 170.24 seconds |
-| Browser end-to-end suite | Full rerun: 29 scenarios passed in Chromium in 3.9 minutes; public-card checks at 390, 768, and 1280 px |
+| Backend/PostgreSQL test suite | Latest full rerun, 2 November: 275 passed against isolated local PostgreSQL in 79.68 seconds |
+| Browser end-to-end suite | Latest full rerun, 2 November: 38 scenarios passed in Chromium in 3.1 minutes, including scanner and protected barcode navigation; public-card checks at 390, 768, and 1280 px |
 | Automated accessibility | No violations for the selected WCAG A/AA checks on public, account, workspace, and administrator activity pages |
 | QR decoding | Seven module patterns, supported independent corner-frame/center combinations, scan-safe gradient palettes, individually styled labels, frames, and logos decoded with ZXing-C++ |
 | Supabase connection | Passed with client-to-Supabase TLS verified through libpq |
@@ -146,3 +146,14 @@ These checks do not establish physical phone-camera/printer compatibility, live 
 - README and CloudPanel deployment instructions include the new route, image limits, `npm ci`/frontend rebuild, all lazy assets, HTTPS and camera permission requirements, and optional restrictive Permissions-Policy/CSP adjustments. This feature needs no new backend setting, database migration, external API key, or administrator build.
 
 Camera tests use actual browser MediaStreams generated from canvas frames. Physical phone/webcam hardware and deployed HTTPS/proxy policies still require verification on the target devices/server.
+
+## Production domain and redirect verification — 2 November 2026
+
+- The complete backend suite passed: **275 tests in 79.68 seconds**, with one existing Starlette test-client deprecation warning. The complete browser suite passed: **38 scenarios in 3.1 minutes**. Both used isolated loopback PostgreSQL databases; this follow-up did not migrate, delete, or write to Supabase or existing demonstration accounts.
+- The 41 new backend cases cover origin normalization and invalid configuration rejection (including wildcard hosts), exact CORS/mutation origins, production-only preflight failures, configured-domain generation for QR codes/short links/tracked barcodes/business cards, malicious Host/forwarded headers, mobile destinations, recovery URLs, and protected redirects. Bulk-generated managed QR and barcode PNGs are decoded to verify their actual embedded public addresses. Static URLs and product barcode values retain their original content.
+- Password forms retain the barcode scan channel after incorrect-password retries and successful unlock. The new browser scenario follows the real form between separate application/API origins, checks signed-in desktop and anonymous mobile destinations, and verifies two barcode scans versus a separate link click. Unsuccessful password attempts do not add events.
+- A linked business-card redirect resolves its managed card path on the configured public domain without rewriting stored data. Explicit alternate QR destinations and mobile overrides remain explicit. Retained old hostnames require an allowed origin for password-form POST requests, as documented.
+- `python -m app.manage check-deployment` checks production origin/cookie configuration without accessing the database. A CLI smoke run with temporary HTTPS domain settings passed; local HTTP settings intentionally fail this production-only check. No application schema migration is required by these changes.
+- README, backend setup guidance, and DEPLOYMENT.md describe fresh production databases, final-domain configuration, separate public/customer/admin hosts, preserving proxy query strings and password POSTs, deployment checks, and rollback. No development records or private environment files are included in a production release.
+
+Real CloudPanel routing, public DNS/TLS, physical cameras/printers, production SMTP delivery, and sustained load were not exercised by this local follow-up. They require verification on the deployed server; passing local tests does not establish those external conditions.

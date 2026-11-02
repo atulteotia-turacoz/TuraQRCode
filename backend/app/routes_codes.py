@@ -298,15 +298,17 @@ def html_page(title,body,brand=True):
 
 
 def public_code(db,slug):
-    code=db.scalar(select(Code).where(Code.slug==slug))
+    row=db.execute(select(Code,BusinessCard.slug).outerjoin(BusinessCard,
+        (BusinessCard.qr_code_id==Code.id)&(BusinessCard.user_id==Code.user_id)).where(Code.slug==slug)).first()
+    code,card_slug=row if row else (None,None)
     if not code or code.mode=='static': raise HTTPException(404,'This link could not be found.')
     if not code.is_active or (code.expires_at and code.expires_at <= now()): raise HTTPException(410,'This link is no longer available.')
     owner=db.get(User,code.user_id)
     if not owner or not owner.is_active: raise HTTPException(410,'This link is no longer available.')
-    return code
+    return code,card_slug
 
 
-def track_redirect(db,code,request,via,status_code=302):
+def track_redirect(db,code,request,via,status_code=302,card_slug=None):
     ua=request.headers.get('user-agent','').lower()
     mobile=any(x in ua for x in ('mobile','android','iphone','ipad'))
     try: ref=(urlsplit(request.headers.get('referer','')).hostname or 'Direct')[:253]
@@ -315,11 +317,18 @@ def track_redirect(db,code,request,via,status_code=302):
     db.add(Event(code_id=code.id,channel=channel,device='Mobile' if mobile else 'Desktop',referrer=ref))
     db.commit()
     destination=code.content['value'] if code.kind=='barcode' else code.content['url']
+    # A linked profile follows the configured public domain, without migrating
+    # stored URLs. Explicit alternate destinations retain their original meaning.
+    if card_slug:
+        original=urlsplit(destination)
+        if original.path=='/c/'+card_slug:
+            base=urlsplit(settings.public_base_url)
+            destination=original._replace(scheme=base.scheme,netloc=base.netloc).geturl()
     return RedirectResponse(code.mobile_url if mobile and code.mobile_url else destination,status_code=status_code,headers={'Cache-Control':'no-store','Referrer-Policy':'no-referrer'})
 
 
 def password_page(slug,via,error='',status_code=200):
-    action='/r/'+escape(slug,quote=True)+('?via=qr' if via=='qr' else '')
+    action='/r/'+escape(slug,quote=True)+('?via='+via if via in ('qr','barcode') else '')
     notice='<p role="alert">'+escape(error)+'</p>' if error else '<p>Enter the access password to continue.</p>'
     return HTMLResponse(html_page('Protected link','<h1>This link is protected</h1>'+notice+
         '<form method="post" action="'+action+'"><label for="password">Access password</label>'
@@ -330,10 +339,10 @@ def password_page(slug,via,error='',status_code=200):
 @router.get('/r/{slug}')
 def redirect(slug:str,request:Request,via:str='',db:Session=Depends(get_db)):
     throttle(request,'redirect',120,60)
-    code=public_code(db,slug)
+    code,card_slug=public_code(db,slug)
     if code.password_hash:
         return password_page(slug,via)
-    return track_redirect(db,code,request,via)
+    return track_redirect(db,code,request,via,card_slug=card_slug)
 
 
 @router.post('/r/{slug}')
@@ -356,9 +365,9 @@ async def unlock(slug:str,request:Request,via:str='',db:Session=Depends(get_db))
     except (UnicodeError,ValueError):
         return password_page(slug,via,'Please enter a valid password.',400)
     def complete():
-        code=public_code(db,slug)
+        code,card_slug=public_code(db,slug)
         if code.password_hash and not verify(values[0],code.password_hash):
             return password_page(slug,via,'That password is incorrect. Please try again.',403)
         # See Other explicitly changes the form POST into a destination GET.
-        return track_redirect(db,code,request,via,status_code=303)
+        return track_redirect(db,code,request,via,status_code=303,card_slug=card_slug)
     return await run_in_threadpool(complete)

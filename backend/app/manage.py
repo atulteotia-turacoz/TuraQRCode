@@ -1,4 +1,4 @@
-"""Explicit operations: python -m app.manage check|init|migrate|supabase-check."""
+"""Explicit database and production-configuration checks."""
 import sys
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
@@ -48,6 +48,20 @@ def check():
         return False
 
 
+def check_deployment():
+    errors=settings.deployment_errors()
+    if errors:
+        print('Production URL configuration: FAILED')
+        for error in errors: print('- '+error)
+        return False
+    print('Production URL configuration: SUCCESS')
+    print('PUBLIC_BASE_URL='+settings.public_base_url)
+    print('FRONTEND_URL='+settings.frontend_url)
+    print('Exact trusted origins configured; secure cookies enabled.')
+    print('DNS, TLS, proxy routing, and real browser behavior still require deployment checks.')
+    return True
+
+
 def supabase_check():
     import httpx
     try:
@@ -61,6 +75,7 @@ def supabase_check():
 if __name__=='__main__':
     action=sys.argv[1] if len(sys.argv)>1 else 'check'
     if action=='check': sys.exit(0 if check() else 1)
+    elif action=='check-deployment': sys.exit(0 if check_deployment() else 1)
     elif action=='supabase-check': supabase_check()
     elif action in ('init','migrate'):
         try:
@@ -70,4 +85,4 @@ if __name__=='__main__':
         except Exception as exc:
             print('Initialization failed ('+type(exc).__name__+'). Check your server environment and connection permissions.')
             sys.exit(1)
-    else: sys.exit('Use check, init, migrate, or supabase-check.')
+    else: sys.exit('Use check, check-deployment, init, migrate, or supabase-check.')

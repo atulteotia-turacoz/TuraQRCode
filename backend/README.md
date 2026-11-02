@@ -74,6 +74,12 @@ Pytest refuses destructive tests unless the host is loopback and the database is
 
 See [verification](docs/VERIFICATION.md) for the executed feature checks and practical limits.
 
+## Production URL configuration
+
+Before creating production records, set final HTTPS `PUBLIC_BASE_URL`, `FRONTEND_URL`, exact customer/admin `CORS_ORIGINS`, and `COOKIE_SECURE=true` in the production service environment. URL settings accept origins only and normalize trailing slashes/default ports. Run `.venv/Scripts/python.exe -m app.manage check-deployment` on Windows, or `.venv/bin/python -m app.manage check-deployment` on Linux, followed by the existing database check/init commands. This read-only production preflight rejects local/insecure settings; it is expected to fail for a local HTTP development environment.
+
+Use a separate empty production database; no demo data migration or reset is required. Managed URLs come from configuration rather than request Host headers. Protected QR/barcode forms preserve their scan channel. Linked business-card redirects follow the configured public hostname without rewriting stored records; explicit website/mobile overrides retain their destination. See [the deployment guide](../DEPLOYMENT.md) for same/separate public domains, proxy/query routing, retained-domain origins, deployment verification, and rollback constraints.
+
 ## Recovery email
 
 Set `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`, `SMTP_USER`, and `SMTP_PASSWORD` to enable recovery messages. STARTTLS is enabled by default. Without SMTP, the public recovery page provides private, non-enumerating instructions and an administrator can create a confidential recovery link in the admin application. The app never displays a reset token to an unauthenticated requester. SMTP delivery requires your own credentials and has not been verified without them.

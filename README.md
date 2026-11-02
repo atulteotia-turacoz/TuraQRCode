@@ -218,7 +218,7 @@ The customer and administrator apps keep their own UI primitives so each builds 
 | Administrator | Platform counts, account/code search and pagination, account suspension/restoration, code pause/activation, confidential recovery links, account/admin audit history |
 | Administrator protection | Server-only bootstrap, Argon2id password hashes, mandatory initial password change, backend role checks; administrator accounts cannot be suspended from the panel |
 | Data protection | Owner access checks, private PostgreSQL schema/RLS, HttpOnly SameSite session cookies, Origin checks, request/content/logo validation, single-process rate limits, TLS for remote PostgreSQL |
-| Deployment configuration | One stable branded link hostname via PUBLIC_BASE_URL; optional SMTP recovery email |
+| Deployment configuration | Configured branded link hostname via PUBLIC_BASE_URL; normalized exact web origins; read-only production URL preflight; optional SMTP recovery email |
 
 ### Important behavior and limits
 
@@ -229,6 +229,8 @@ The customer and administrator apps keep their own UI primitives so each builds 
 - Profile email changes and self-service account deletion are not implemented. Account recovery is available through SMTP when configured or through the administrator-assisted workflow.
 - There is no billing/subscription UI, file/media QR hosting, GS1, integration marketplace, per-account custom-domain provisioning in this release.
 - SMTP delivery and public domain/HTTPS hosting require deployment-specific credentials/configuration. Functional tests are not a production load test.
+
+For a fresh production installation, use a separate empty database and configure final HTTPS domains before generating codes. Run `python -m app.manage check-deployment` from the backend before initialization/restart; this production-only configuration check intentionally fails for local HTTP development. Managed QR/barcode/short-link addresses use `PUBLIC_BASE_URL`, recovery uses `FRONTEND_URL`, and linked card redirects follow the configured public host. See [DEPLOYMENT.md](DEPLOYMENT.md) for origin/proxy settings, signed-out phone checks, and rollback constraints. No local demo data needs to be migrated.
 
 ## Complete page inventory
 

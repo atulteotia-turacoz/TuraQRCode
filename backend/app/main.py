@@ -12,14 +12,14 @@ from .security import COOKIE
 from . import routes_auth, routes_codes, routes_cards, routes_admin
 
 app=FastAPI(title='TuraQRcode API',version='1.0.0',description='Turacoz QR and short-link service',docs_url='/api/docs',openapi_url='/api/openapi.json')
-app.add_middleware(CORSMiddleware,allow_origins=settings.origins,allow_credentials=True,allow_methods=['GET','POST','PATCH','DELETE','OPTIONS'],allow_headers=['Content-Type'])
+app.add_middleware(CORSMiddleware,allow_origins=settings.trusted_origins,allow_credentials=True,allow_methods=['GET','POST','PATCH','DELETE','OPTIONS'],allow_headers=['Content-Type'])
 
 
 @app.middleware('http')
 async def security_headers(request:Request,call_next):
     if request.method in ('POST','PATCH','DELETE','PUT'):
         origin=request.headers.get('origin')
-        allowed=set(settings.origins+[settings.public_base_url.rstrip('/'),settings.frontend_url.rstrip('/')])
+        allowed=set(settings.trusted_origins)
         # HTML forms and API requests must originate from an approved first-party site.
         if (origin and origin not in allowed) or (request.cookies.get(COOKIE) and not origin):
             return JSONResponse({'detail':'This request could not be verified. Please refresh the page and try again.'},403)
