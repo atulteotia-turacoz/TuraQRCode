@@ -145,7 +145,8 @@ def render(data, design, fmt='png', size=1024, print_width_cm=None, print_preset
         y = top+side
         color, paper = (fg, bg) if frame == 'banner' else (bg, fg)
         shapes.append(f'<rect x="{left:g}" y="{y:g}" width="{side:g}" height="50" rx="12" fill="{paper}" stroke="{fg}" stroke-width="2"/>')
-        shapes.append(f'<text x="500" y="{y+34:g}" text-anchor="middle" font-family="Bitstream Vera Sans,Arial,sans-serif" font-size="26" font-weight="700" fill="{color}">{escape(label)}</text>')
+        if label:
+            shapes.append(f'<text x="500" y="{y+34:g}" text-anchor="middle" font-family="Bitstream Vera Sans,Arial,sans-serif" font-size="26" font-weight="700" fill="{color}">{escape(label)}</text>')
     if bottom_text:
         text(bottom_text, 'bottom')
     if frame == 'border':

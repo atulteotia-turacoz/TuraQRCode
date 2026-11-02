@@ -17,9 +17,20 @@ def normalize_logo(value):
             if img.width * img.height > 4_000_000 or img.width < 8 or img.height < 8:
                 raise ValueError()
             img.load()
+            img = ImageOps.exif_transpose(img).convert('RGBA')
             img.thumbnail((1024,1024),Image.Resampling.LANCZOS)
-            out = io.BytesIO()
-            img.convert('RGBA').save(out, 'PNG')
+            # A compact JPG/WebP may expand beyond the input limit as a PNG.
+            # Keep normalized images valid when the saved design is submitted again.
+            while True:
+                if img.width < 8 or img.height < 8:
+                    padded = Image.new('RGBA',(max(8,img.width),max(8,img.height)))
+                    padded.paste(img,((padded.width-img.width)//2,(padded.height-img.height)//2))
+                    img = padded
+                out = io.BytesIO()
+                img.save(out, 'PNG')
+                if out.tell() <= 500000:
+                    break
+                img.thumbnail((max(8,int(img.width*.8)),max(8,int(img.height*.8))),Image.Resampling.LANCZOS)
         return 'data:image/png;base64,' + base64.b64encode(out.getvalue()).decode()
     except (ValueError, OSError, UnidentifiedImageError, Image.DecompressionBombError):
         raise ValueError('Upload a PNG, JPG, or WebP logo smaller than 500 KB and 4 megapixels.')

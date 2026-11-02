@@ -548,7 +548,7 @@ After publishing, verify:
 2. Create a password-protected editable QR, scan it on a phone, enter an incorrect password and then the correct one, and confirm destination navigation. Test the configured mobile destination as well.
 3. Open `/barcode-generator`, export an EAN-13 barcode, and confirm its check digit and scan result. Sign in and save a barcode from `/app/barcodes/new`.
 4. Create a link from `/app/links/new`, add campaign tags and an alias, copy the short URL, and confirm its destination.
-5. Change QR pattern, corner style, frame text, colors, and logo; export and scan the final image. Create a business card using a light brand color and verify readable text and its QR.
+5. Change QR pattern, corner style, frame text, colors, and logo; clear the top/bottom labels and frame text, switch all four frames, save/reopen, and export/scan the final PNG/SVG/PDF. Also try a photographic JPG logo and an invalid file; the valid logo should survive edits and a rejected file should leave the previous design usable. Create a business card using a light brand color and verify readable text and its QR.
 
 The server supplies the updated Content Security Policy for protected-link forms. If a CDN or custom Nginx rule injects an additional `form-action 'self'` policy on `/r/`, remove that conflicting rule for these public password pages: Chrome can apply it to the destination after a form submission. Preserve HTTPS and the remaining security headers. Hard-refresh a previously opened password form after deploying the fix.
 

@@ -203,13 +203,13 @@ The customer and administrator apps keep their own UI primitives so each builds 
 | Barcodes | Separate saved barcode history; Code 128, Code 39, EAN-13, EAN-8, UPC-A; EAN/UPC check digits; optional value caption; high-contrast color presets and custom colors; adjustable bar width, height, and caption size; PNG/SVG/PDF and saved bundle/print exports. Track scan requests with managed Code 128 website links. |
 | QR Scanner | Last tab in Manage, below Bulk & print. Read QR codes and Code 128, Code 39, EAN, and UPC barcodes using a camera or PNG/JPG/WebP image. Display decoded text or data, copy contents, open HTTP/HTTPS links, or opt into automatic web-link navigation. Camera selection, stop/cancel, permission-error recovery, and inverted-code decoding are included. Scans are processed locally and are not saved as codes or uploaded to the API. Opening a managed link records its normal redirect activity. |
 | Exports | PNG (256–4096 px through saved-code API), SVG, PDF, ZIP bundle with CSV index, and nine-code A4 print sheets |
-| Short links | The Links workspace lists short links only; it has its own create flow, destination, generated/custom alias, search, status/project filters, sorting, pagination, pause/resume, expiry, password protection, mobile destination, and click history. Aliases are 3–64 letters, numbers, hyphens, or underscores and globally unique |
+| Link shortener | The Link shortener workspace lists short links only; it has its own create flow, destination, generated/custom alias, search, status/project filters, sorting, pagination, pause/resume, expiry, password protection, mobile destination, and click history. Aliases are 3–64 letters, numbers, hyphens, or underscores and globally unique |
 | Editable destinations | Update a managed URL without changing its short address or QR payload |
 | Link controls | Pause/reactivate, optional expiry, optional access password, optional alternate mobile destination |
-| Saved codes | QR, Links, and Barcodes each have separate saved lists. The QR list excludes short links and barcodes; the Links list includes short links only; Barcode history contains barcode records only. Search, relevant filters, project selection, sort, pagination, edit, delete, and export are available |
+| Saved codes | QR, Link shortener, and Barcodes each have separate saved lists. The QR list excludes short links and barcodes; Link shortener includes short links only; Barcode history contains barcode records only. Search, relevant filters, project selection, sort, pagination, edit, delete, and export are available |
 | Overview | Code/active-code counts, clicks/scans, 14-day activity, top connections, devices, recent codes, quick-create shortcuts |
 | Analytics | Each trackable redirect is saved against its code with time, link-click or QR-scan channel, device category, and referrer host. Per-link activity is opened from its click count; reporting includes date filters, UTC daily trends, latest 25 requests, and CSV export up to 50,000 rows |
-| Projects | Every account receives a default project; new codes, links, barcodes, and bulk rows go there unless another project is selected. Project cards link to separate QR, Links, and Barcodes lists. Existing unassigned codes are migrated. Rename/color projects; deletion moves items to the default project, which cannot be deleted |
+| Projects | Every account receives a default project; new codes, links, barcodes, and bulk rows go there unless another project is selected. Project cards link to separate QR, Link shortener, and Barcodes lists. Existing unassigned codes are migrated. Rename/color projects; deletion moves items to the default project, which cannot be deleted |
 | Business cards | Name, title, company, email, phone, website, portfolio links, ten social platforms, up to twelve work-experience entries, ten custom professional sections, profile photo, cover image, company logo, coordinated themes, readable text and a contrasting exported QR; inline rich-text tools for bio/experience/sections, image crop controls, full-page live editor, continuous public profile, vCard download, QR export, copy address; deleting its linked QR also removes the card |
 | Bulk UI | CSV upload or paste, column mapping, URL or text batches, editable/static/short-link selection as applicable, row-level results, ZIP/print export; downloadable five-row example, maximum 100 rows and 100 KB CSV input |
 | Bulk API | Up to 100 supported code objects per request; validation and alias conflicts reported per row while valid rows are saved |
@@ -250,8 +250,8 @@ For a fresh production installation, use a separate empty database and configure
 | `/app` | Overview/dashboard | Signed-in account with password requirement satisfied |
 | `/app/codes` | Saved QR codes | Signed-in owner |
 | `/app/create` | Create QR code/short link | Signed-in account |
-| `/app/links` | Short links only, with click-count links to per-link activity | Signed-in owner |
-| `/app/links/new` | Short-link creator, UTM tags, link controls | Signed-in account |
+| `/app/links` | Link shortener history, with click-count links to per-link activity | Signed-in owner |
+| `/app/links/new` | Short-link creator, custom ending, and link controls | Signed-in account |
 | `/app/links/:id` | Short-link details, destination editor, and activity | Owner |
 | `/app/barcodes` | Saved barcodes | Signed-in owner |
 | `/app/barcodes/:id` | Saved barcode editor (old `/app/codes/:id` barcode links redirect here) | Signed in |
@@ -307,7 +307,7 @@ Each app creates its own `dist`. Production serves these files with Nginx and ro
 
 ## Tests and verification
 
-The current verification covers **129 backend tests, 19 Chromium browser scenarios, successful builds for both React applications, and no known vulnerabilities in the dependency audits**. Live Supabase checks covered TLS, migrations, administrator state, temporary-account CRUD, default projects, protected unlocks, barcode exports, redirects, analytics, downloads, authorization, and cleanup. See [the verification report](backend/docs/VERIFICATION.md) for exact coverage and limits.
+The latest regression on **2 November 2026** covers **288 backend tests, 41 Chromium browser scenarios, and a successful customer production build**. Earlier administrator builds, dependency audits, and live Supabase checks are documented separately. Live checks covered TLS, migrations, administrator state, temporary-account CRUD, default projects, protected unlocks, barcode exports, redirects, analytics, downloads, authorization, and cleanup. See [the verification report](backend/docs/VERIFICATION.md) for dated evidence, exact coverage, and limits.
 
 To reproduce tests on the Windows development environment, first start genuine isolated local PostgreSQL in a separate terminal:
 
@@ -350,6 +350,8 @@ Reference research and feature decisions: [reference review](frontend/design-sys
 ### Export sizes and card images
 
 QR PNG and SVG exports are always square, including labels, frames and logos. PNG files contain 300 DPI metadata. Size choices are 256, 354, 1,024 (default), 1,080, 1,200, 2,480 and 3,000 pixels per side. Ordinary PDFs use the matching square physical size at 300 DPI; the explicit A4 preset centers a square QR on A4 paper. SVG is recommended when artwork must scale beyond its chosen raster size. A zero label offset places its visible text at the outer edge of the required QR clear margin; 100 moves it to the canvas edge. The scan area is never covered.
+
+Text above/below the QR and frame callout text are optional and can be cleared without blocking preview, saving, or downloads. Empty frame text remains empty when switching frames or reopening a saved code. QR logos accept PNG/JPG/WebP up to 500 KB, at least 8 px per side, and up to four megapixels; normalized PNGs stay within the same limits for subsequent edits. Unsupported or unreadable uploads display an inline message and preserve the previous logo.
 
 Barcode PNG, SVG and PDF exports use the same vector composition. Width choices are 1,024, 2,048 and 3,000 px; long encoded values can require a wider minimum to keep narrow bars readable. Unsaved color/height/caption changes are included in downloads. Barcode shapes remain rectangular according to their standard.
 

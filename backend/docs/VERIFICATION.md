@@ -9,8 +9,8 @@ Initial verification was executed on **29 October 2026** in `E:\TuraQRcode`. The
 | Application layout | `backend`, `admin`, and `frontend` are independently runnable/buildable application folders. Subsequently consolidated under one root Git repository for the requested GitHub remote, with root README/deployment documentation. |
 | Customer production build | Passed: TypeScript and Vite |
 | Administrator production build | Passed: TypeScript and Vite |
-| Backend/PostgreSQL test suite | Latest full rerun, 2 November: 275 passed against isolated local PostgreSQL in 79.68 seconds |
-| Browser end-to-end suite | Latest full rerun, 2 November: 38 scenarios passed in Chromium in 3.1 minutes, including scanner and protected barcode navigation; public-card checks at 390, 768, and 1280 px |
+| Backend/PostgreSQL test suite | Latest full rerun, 2 November: 288 passed against isolated local PostgreSQL in 235.21 seconds |
+| Browser end-to-end suite | Latest full rerun, 2 November: 41 scenarios passed in Chromium in 5.7 minutes, including optional QR text/logo recovery, scanner, and protected barcode navigation; public-card checks at 390, 768, and 1280 px |
 | Automated accessibility | No violations for the selected WCAG A/AA checks on public, account, workspace, and administrator activity pages |
 | QR decoding | Seven module patterns, supported independent corner-frame/center combinations, scan-safe gradient palettes, individually styled labels, frames, and logos decoded with ZXing-C++ |
 | Supabase connection | Passed with client-to-Supabase TLS verified through libpq |
@@ -157,3 +157,13 @@ Camera tests use actual browser MediaStreams generated from canvas frames. Physi
 - README, backend setup guidance, and DEPLOYMENT.md describe fresh production databases, final-domain configuration, separate public/customer/admin hosts, preserving proxy query strings and password POSTs, deployment checks, and rollback. No development records or private environment files are included in a production release.
 
 Real CloudPanel routing, public DNS/TLS, physical cameras/printers, production SMTP delivery, and sustained load were not exercised by this local follow-up. They require verification on the deployed server; passing local tests does not establish those external conditions.
+
+## Optional QR text, frames, and logo recovery — 2 November 2026
+
+- Fixed two interacting caption problems: the API required a nonempty frame label even when the frame was hidden, and the controlled input visually restored the default when cleared. Frame text is now optional; empty values persist through all four frame choices, preview, create, reopen, update, and export. Top/bottom labels can also remain empty. Callout frames retain their selected shape without drawing empty text.
+- Thirteen new backend cases passed. They cover empty/whitespace-only labels across every frame, creation and editing with a logo, exact square 354 px PNG/SVG/PDF exports decoded with ZXing-C++, invalid captions, a photographic JPG whose PNG representation exceeds the input limit, and very thin transparent logos. Normalized logos retain proportions/transparency, honor EXIF orientation, and remain valid for a subsequent save within the existing byte/pixel limits.
+- Three new targeted browser scenarios passed for editable/static QR creation and upload recovery. They clear all labels, switch every frame, upload a logo, save/reload/update, and download square PNGs. Invalid formats, broken bytes, oversized files, too-small dimensions, and over-budget pixel counts display inline errors while preserving the previous design; removing/re-uploading the same file recovers cleanly. The final full browser rerun is recorded in the Results table.
+- Renamed the customer navigation, history heading, breadcrumb, public navigation, and project shortcut to **Link shortener**. Its existing `/app/links` routes and saved-link behavior are unchanged; business-card portfolio link labels are separate.
+- The complete backend suite passed with **288 tests in 235.21 seconds**, the complete browser suite passed with **41 scenarios in 5.7 minutes**, and the customer TypeScript/Vite production build passed. A read-only check against the running development API at port 8000 returned **200** SVG previews for all four frames with empty labels. Automated account writes used isolated local databases; no live customer records or Supabase schema were changed.
+
+Deploy this correction by restarting the backend and rebuilding the customer frontend. It needs no new dependency, database migration, or administrator UI change. Physical camera/printer and deployed-server checks remain outside this automated evidence.

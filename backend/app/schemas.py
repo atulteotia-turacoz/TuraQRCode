@@ -112,7 +112,7 @@ class Design(Input):
     eye_ball_style: Literal['square', 'rounded', 'circle', 'diamond'] | None = None
     eye_color: str | None = None
     frame: Literal['none', 'scan', 'banner', 'border'] = 'none'
-    frame_label: str = Field(default='SCAN ME',min_length=1,max_length=24)
+    frame_label: str = Field(default='SCAN ME',max_length=24)
     top_text: str = Field(default='',max_length=32)
     bottom_text: str = Field(default='',max_length=32)
     text_size: int = Field(default=20,ge=12,le=36)

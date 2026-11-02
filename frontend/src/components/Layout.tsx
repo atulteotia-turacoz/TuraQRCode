@@ -15,7 +15,7 @@ const workspaceNavigation = [
 
 const manageNavigation = [
   {to: '/app/codes', label: 'QR codes', icon: QrCode},
-  {to: '/app/links', label: 'Links', icon: Link2},
+  {to: '/app/links', label: 'Link shortener', icon: Link2},
   {to: '/app/barcodes', label: 'Barcodes', icon: Barcode},
   {to: '/app/business-cards', label: 'Business cards', icon: ContactRound},
   {to: '/app/bulk', label: 'Bulk & print', icon: Layers},
@@ -36,7 +36,7 @@ export default function Layout() {
   const isBarcodesArea = location.pathname.startsWith('/app/barcodes');
   const pageLabel = [...workspaceNavigation, ...manageNavigation, {to: '/app/analytics', label: 'Analytics'}]
     .find(item => 'end' in item && item.end ? location.pathname === item.to : location.pathname.startsWith(item.to))?.label
-    || (isLinksArea ? 'Links' : isBarcodesArea ? 'Barcodes' : location.pathname.startsWith('/app/create') ? 'Create a QR code' : 'Account settings');
+    || (isLinksArea ? 'Link shortener' : isBarcodesArea ? 'Barcodes' : location.pathname.startsWith('/app/create') ? 'Create a QR code' : 'Account settings');
 
   useEffect(() => {
     if (!open) return;

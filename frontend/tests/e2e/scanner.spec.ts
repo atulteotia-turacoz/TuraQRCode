@@ -85,7 +85,7 @@ test('pending permissions, camera switching, stopping and navigation do not leak
  await page.getByRole('button',{name:'Stop camera',exact:true}).click();await tracksStopped(page);
  await page.getByRole('button',{name:'Start camera',exact:true}).click();await expect(page.getByText('Camera is on',{exact:true})).toBeVisible();await page.getByRole('tab',{name:'Upload image',exact:true}).click();await tracksStopped(page);
  await page.getByRole('tab',{name:'Use camera',exact:true}).click();await page.getByRole('button',{name:'Start camera',exact:true}).click();await expect(page.getByText('Camera is on',{exact:true})).toBeVisible();await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,get:()=>true});document.dispatchEvent(new Event('visibilitychange'));});await tracksStopped(page);await page.evaluate(()=>Object.defineProperty(document,'hidden',{configurable:true,get:()=>false}));
- await page.getByRole('button',{name:'Start camera',exact:true}).click();await expect(page.getByText('Camera is on',{exact:true})).toBeVisible();await page.getByRole('navigation').getByRole('link',{name:'Links',exact:true}).click();await expect(page).toHaveURL(/\/app\/links$/);await tracksStopped(page);
+ await page.getByRole('button',{name:'Start camera',exact:true}).click();await expect(page.getByText('Camera is on',{exact:true})).toBeVisible();await page.getByRole('navigation').getByRole('link',{name:'Link shortener',exact:true}).click();await expect(page).toHaveURL(/\/app\/links$/);await tracksStopped(page);
 });
 
 test('scanner supports keyboard tabs, mobile layout and automated accessibility',async({page})=>{
