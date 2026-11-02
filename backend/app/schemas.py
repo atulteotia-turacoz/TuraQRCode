@@ -51,6 +51,7 @@ class Register(Input):
     password: str
     accept_terms: bool
     accept_privacy: bool
+    plan_id: str | None = Field(default=None, max_length=36)
     _password = field_validator('password')(strong_password)
 
     @model_validator(mode='after')
@@ -423,3 +424,138 @@ class CardInput(Input):
 
 class AdminUserUpdate(Input):
     is_active: bool
+
+
+class Checkout(Input):
+    plan_id: str = Field(max_length=36)
+    cycle: Literal['monthly', 'yearly'] = 'monthly'
+    gateway: Literal['razorpay', 'stripe', 'ccavenue'] | None = None
+
+
+class SaasUpdate(Input):
+    enabled: bool
+
+
+class PlanInput(Input):
+    name: str = Field(min_length=2, max_length=80)
+    description: str = Field(default='', max_length=240)
+    price_monthly: int = Field(ge=0, le=100_000_000)
+    price_yearly: int = Field(ge=0, le=1_000_000_000)
+    currency: Literal['INR', 'USD', 'EUR', 'GBP', 'AED', 'SGD'] = 'INR'
+    max_codes: int | None = Field(default=None, ge=0, le=10_000_000)
+    max_cards: int | None = Field(default=None, ge=0, le=10_000_000)
+    max_projects: int | None = Field(default=None, ge=0, le=10_000_000)
+    features: list[str] = Field(default_factory=list, max_length=20)
+    is_active: bool = True
+    is_featured: bool = False
+    sort_order: int = Field(default=0, ge=0, le=9999)
+
+    @field_validator('features')
+    @classmethod
+    def clean_features(cls, value):
+        items = [item.strip() for item in value if item.strip()]
+        if any(len(item) > 120 for item in items):
+            raise ValueError('Keep each plan feature to 120 characters or fewer.')
+        return items
+
+
+class LandingBrand(Input):
+    primary: str = Field(min_length=1, max_length=30)
+    accent: str = Field(default='', max_length=30)
+
+
+class PanelRow(Input):
+    label: str = Field(max_length=80)
+    value: str = Field(default='', max_length=80)
+    accent: bool = False
+
+
+class LandingHero(Input):
+    eyebrow: str = Field(default='', max_length=120)
+    title: str = Field(min_length=1, max_length=200)
+    subtitle: str = Field(default='', max_length=600)
+    note: str = Field(default='', max_length=200)
+    signup_note: str = Field(default='', max_length=200)
+    panel_title: str = Field(default='', max_length=60)
+    panel_badge: str = Field(default='', max_length=60)
+    panel_rows: list[PanelRow] = Field(default_factory=list, max_length=10)
+
+
+class LandingAuth(Input):
+    heading: str = Field(default='', max_length=200)
+    body: str = Field(default='', max_length=400)
+    note: str = Field(default='', max_length=200)
+
+
+class LandingItem(Input):
+    title: str = Field(max_length=160)
+    body: str = Field(default='', max_length=1200)
+
+
+class LandingSection(Input):
+    id: str = Field(pattern=r'^[a-z0-9-]{1,40}$')
+    type: Literal['cards', 'steps', 'list', 'text', 'pricing', 'faq', 'cta']
+    enabled: bool = True
+    nav_label: str = Field(default='', max_length=40)
+    heading: str = Field(default='', max_length=200)
+    intro: str = Field(default='', max_length=800)
+    body: str = Field(default='', max_length=4000)
+    note: str = Field(default='', max_length=400)
+    button_label: str = Field(default='', max_length=60)
+    items: list[LandingItem] = Field(default_factory=list, max_length=24)
+
+
+class LandingFooter(Input):
+    tagline: str = Field(default='', max_length=200)
+
+
+class LandingContent(Input):
+    brand: LandingBrand
+    hero: LandingHero
+    auth: LandingAuth
+    sections: list[LandingSection] = Field(max_length=20)
+    footer: LandingFooter
+
+    @model_validator(mode='after')
+    def unique_sections(self):
+        ids = [section.id for section in self.sections]
+        if len(ids) != len(set(ids)):
+            raise ValueError('Each section needs its own unique id.')
+        return self
+
+
+class SmtpUpdate(Input):
+    host: str = Field(default='', max_length=253)
+    port: int = Field(default=587, ge=1, le=65535)
+    username: str = Field(default='', max_length=254)
+    password: str = Field(default='', max_length=512)
+    clear_password: bool = False
+    from_address: str = Field(default='', max_length=254)
+    security: Literal['starttls', 'ssl', 'none'] = 'starttls'
+
+
+class SmtpTest(Input):
+    to: EmailStr
+
+
+class GatewayUpdate(Input):
+    enabled: bool = False
+    mode: Literal['test', 'live'] = 'test'
+    public: dict[str, str] = Field(default_factory=dict)
+    secrets: dict[str, str] = Field(default_factory=dict)
+
+    @field_validator('public', 'secrets')
+    @classmethod
+    def bounded(cls, value):
+        if len(value) > 6 or any(len(item) > 512 for item in value.values()):
+            raise ValueError('A gateway value is too long.')
+        return {key: item.strip() for key, item in value.items()}
+
+
+class AdminAccountCreate(Input):
+    name: str = Field(min_length=2, max_length=100)
+    email: EmailStr
+
+
+class AdminPlanAssign(Input):
+    plan_id: str | None = Field(default=None, max_length=36)

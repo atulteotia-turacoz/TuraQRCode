@@ -10,11 +10,11 @@ depends_on=None
 
 def upgrade():
     for name in ('experience','social_links'):
-        op.add_column('business_cards',sa.Column(name,sa.JSON(),nullable=False,server_default='[]'),schema='tura')
+        op.add_column('business_cards',sa.Column(name,sa.JSON(),nullable=False,server_default='[]'))
     for name in ('profile_image','cover_image','company_logo'):
-        op.add_column('business_cards',sa.Column(name,sa.Text(),nullable=True),schema='tura')
+        op.add_column('business_cards',sa.Column(name,sa.Text(),nullable=True))
 
 
 def downgrade():
     for name in ('company_logo','cover_image','profile_image','social_links','experience'):
-        op.drop_column('business_cards',name,schema='tura')
+        op.drop_column('business_cards',name)

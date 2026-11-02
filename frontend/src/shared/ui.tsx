@@ -1,12 +1,14 @@
 import {useCallback,useEffect,useRef,useState,useId,isValidElement,cloneElement,Children,type Dispatch,type SetStateAction,type ReactNode,type FormEvent,type ReactElement} from 'react';
-import {Link,useNavigate} from 'react-router-dom';
-import {QrCode,ArrowRight,ArrowUpRight,Check,AlertCircle,LoaderCircle,X,LockKeyhole,ShieldCheck,Eye,EyeOff} from 'lucide-react';
+import {Link,Navigate,useNavigate,useSearchParams} from 'react-router-dom';
+import {ArrowRight,ArrowUpRight,Check,AlertCircle,LoaderCircle,X,LockKeyhole,ShieldCheck,Eye,EyeOff} from 'lucide-react';
 import {api,message,post} from './api';
 import {useAuth} from './auth';
+import {ThemeToggle} from './theme';
+import {money,useSite} from './site';
 import {clearResource,readResource,requestResource,writeResource} from './resourceCache';
 import type {User} from './types';
 
-export function Brand({inverse=false}:{inverse?:boolean}){return <Link to="/" className={'brand '+(inverse?'inverse':'')} aria-label="TuraQRcode home"><span className="brand-mark"><QrCode size={23} strokeWidth={2.3}/></span><span>Tura<span className="brand-light">QRcode</span><small>BY TURACOZ</small></span></Link>;}
+export function Brand({inverse=false}:{inverse?:boolean}){const brand=useSite().site?.landing.brand;return <Link to="/" className={'brand '+(inverse?'inverse':'')} aria-label="TuraQRcode home"><span>{brand?.primary??'Tura'}<span className="brand-accent">{brand?.accent??'QRcode'}</span></span></Link>;}
 export function Button({children,busy=false,...props}:React.ButtonHTMLAttributes<HTMLButtonElement>&{busy?:boolean}){return <button {...props} disabled={busy||props.disabled} className={'button '+(props.className||'')}>{busy?<LoaderCircle size={17} className="spin"/>:null}{children}</button>;}
 export function ErrorBox({error}:{error?:string|null}){return error?<div className="notice error" role="alert"><AlertCircle size={18}/><span>{error}</span></div>:null;}
 export function Success({children}:{children:ReactNode}){return <div className="notice success" role="status"><Check size={18}/><span>{children}</span></div>;}
@@ -46,16 +48,20 @@ export function PageHeader({eyebrow,title,description,action}:{eyebrow?:string;t
 export function AuthPage({mode,admin=false}:{mode:'login'|'register'|'forgot'|'reset';admin?:boolean}){
   const {user,setUser}=useAuth();const navigate=useNavigate();const [error,setError]=useState('');const [success,setSuccess]=useState('');const [busy,setBusy]=useState(false);
   const register=mode==='register',forgot=mode==='forgot',reset=mode==='reset';
+  const {site}=useSite();const auth=site?.landing.auth;const plans=site?.plans||[];const [params]=useSearchParams();const next=useRef('/app');
+  const [planId,setPlanId]=useState('');const selectedPlan=plans.find(plan=>plan.id===planId)||plans.find(plan=>plan.id===params.get('plan'))||plans.find(plan=>plan.price_monthly===0)||plans[0];
   useEffect(()=>{setError('');setSuccess('');},[mode]);
   const token=new URLSearchParams(window.location.search).get('token');
-  useEffect(()=>{if(user&&(mode==='login'||register)&&(!admin||user.is_admin))navigate(user.must_change_password?'/change-password':admin?'/':'/app',{replace:true});},[user,mode,register,admin,navigate]);
+  useEffect(()=>{if(user&&(mode==='login'||register)&&(!admin||user.is_admin))navigate(user.must_change_password?'/change-password':admin?'/':next.current,{replace:true});},[user,mode,register,admin,navigate]);
   async function submit(e:FormEvent<HTMLFormElement>){e.preventDefault();setError('');setSuccess('');setBusy(true);const f=new FormData(e.currentTarget);try{
-    if(register){const u=await post<User>('/api/auth/register',{name:f.get('name'),email:f.get('email'),password:f.get('password'),accept_terms:f.get('terms')==='on',accept_privacy:f.get('terms')==='on'});setUser(u);}
+    if(register){const u=await post<User>('/api/auth/register',{name:f.get('name'),email:f.get('email'),password:f.get('password'),accept_terms:f.get('terms')==='on',accept_privacy:f.get('terms')==='on',plan_id:selectedPlan?.id});if(selectedPlan&&selectedPlan.price_monthly>0)next.current='/app/billing?plan='+selectedPlan.id;setUser(u);}
     else if(forgot){const r=await post<{message:string}>('/api/auth/forgot-password',{email:f.get('email')});setSuccess(r.message);}
     else if(reset){if(f.get('password')!==f.get('confirm'))throw new Error('The passwords do not match.');await post('/api/auth/reset-password',{token,new_password:f.get('password')});setUser(null);setSuccess('Your password has been updated. You can now sign in.');}
     else{const u=await post<User>('/api/auth/login',{email:f.get('email'),password:f.get('password'),admin});setUser(u);}
   }catch(e){setError(message(e));}finally{setBusy(false);}}
-  return <div className="auth-page"><aside className="auth-story"><Brand inverse/><div className="auth-story-content"><span className="eyebrow">A BETTER CONNECTION STARTS HERE</span><h1>One scan.<br/>Endless possibilities.</h1><p>Bring your ideas, people, and experiences closer together.</p><div className="auth-art"><QrCode size={154} strokeWidth={1.2}/><span className="floating-label"><Check size={17}/> Ready for your next big idea</span></div></div><small>© {new Date().getFullYear()} Turacoz. All rights reserved.</small></aside><main className="auth-main"><Link className="back-link" to={admin?'/login':'/'}>← {admin?'Administration':'Back to home'}</Link><div className="auth-form"><span className="section-icon">{admin?<ShieldCheck/>:<LockKeyhole/>}</span><p className="eyebrow">{admin?'TURACOZ ADMINISTRATION':'YOUR NEXT CONNECTION'}</p><h1>{register?'Create your account':forgot?'Forgot your password?':reset?'Choose a new password':admin?'Administrator sign in':'Welcome back'}</h1><p className="muted">{register?'Create, share, and manage your QR codes in one place.':forgot?'We’ll help you get back to your account.':reset?'Choose a strong password to protect your account.':admin?'Sign in to manage TuraQRcode.':'Sign in to continue to your workspace.'}</p><ErrorBox error={error}/>{success?<><Success>{success}</Success>{reset&&<Link className="button full" to="/login">Continue to sign in<ArrowRight size={18}/></Link>}</>:<form onSubmit={submit}>
+  if(register&&site&&!site.saas_enabled)return <Navigate to="/login" replace/>;
+  return <div className="auth-page"><aside className="auth-story"><Brand/><div className="auth-story-copy"><p>{auth?.heading}</p><p>{auth?.body}</p></div><small>{auth?.note}</small></aside><main className="auth-main"><Link className="back-link" to={admin?'/login':'/'}>← {admin?'Administration':'Back to home'}</Link><div className="auth-form"><div className="auth-title"><h1>{register?'Create your account':forgot?'Forgot your password?':reset?'Choose a new password':admin?'Administrator sign in':'Sign in'}</h1><ThemeToggle/></div><p className="muted">{register?'Create, share, and manage your QR codes in one place.':forgot?'We’ll help you get back to your account.':reset?'Choose a strong password to protect your account.':admin?'Sign in to manage TuraQRcode.':'Sign in to continue to your workspace.'}</p><ErrorBox error={error}/>{success?<><Success>{success}</Success>{reset&&<Link className="button full" to="/login">Continue to sign in<ArrowRight size={18}/></Link>}</>:<form onSubmit={submit}>
+    {register&&plans.length>0&&<fieldset className="plan-picker"><legend className="sr-only">Plan</legend>{plans.map(plan=><label key={plan.id}><span><input type="radio" name="plan" checked={selectedPlan?.id===plan.id} onChange={()=>setPlanId(plan.id)}/>{plan.name}</span><small>{plan.price_monthly?money(plan.price_monthly,plan.currency)+' / month':'Free'}</small></label>)}</fieldset>}
     {register&&<Field label="Full name"><input name="name" autoComplete="name" required minLength={2} maxLength={100} placeholder="Your full name"/></Field>}
     {!reset&&<Field label="Email address"><input name="email" type="email" autoComplete="email" required maxLength={254} placeholder="you@company.com"/></Field>}
     {!forgot&&<Field label={reset?'New password':'Password'} hint={register||reset?'Use at least 12 characters, including a letter and a number.':undefined}><PasswordInput name="password" autoComplete={register||reset?'new-password':'current-password'} required minLength={register||reset?12:1} maxLength={128}/></Field>}
@@ -65,7 +71,7 @@ export function AuthPage({mode,admin=false}:{mode:'login'|'register'|'forgot'|'r
     <Button className="full" busy={busy} disabled={reset&&!token}>{register?'Create account':forgot?'Send recovery instructions':reset?'Update password':'Sign in'}<ArrowRight size={18}/></Button>
     {reset&&!token&&<ErrorBox error="This recovery link is incomplete. Please request a new one."/>}
   </form>}
-  {!admin&&<p className="auth-switch">{register?<>Already have an account? <Link to="/login">Sign in</Link></>:forgot||reset?<Link to="/login">Back to sign in</Link>:<>New to TuraQRcode? <Link to="/register">Create an account</Link></>}</p>}<div className="auth-trust"><ShieldCheck size={16}/> Your account, securely protected</div></div></main></div>;
+  {!admin&&<p className="auth-switch">{register?<>Already have an account? <Link to="/login">Sign in</Link></>:forgot||reset?<Link to="/login">Back to sign in</Link>:site?.saas_enabled?<>New here? <Link to="/register">Create an account</Link></>:null}</p>}<div className="auth-trust"><ShieldCheck size={16}/> Your account, securely protected</div></div></main></div>;
 }
 export function ChangePassword({admin=false}:{admin?:boolean}){
   const {user,setUser}=useAuth();const [error,setError]=useState('');const [busy,setBusy]=useState(false);const navigate=useNavigate();

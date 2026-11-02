@@ -9,9 +9,9 @@ depends_on = None
 
 
 def upgrade():
-    op.add_column('business_cards', sa.Column('sections', sa.JSON(), nullable=False, server_default='[]'), schema='tura')
-    op.alter_column('business_cards', 'sections', server_default=None, schema='tura')
+    op.add_column('business_cards', sa.Column('sections', sa.JSON(), nullable=False, server_default='[]'))
+    op.alter_column('business_cards', 'sections', server_default=None)
 
 
 def downgrade():
-    op.drop_column('business_cards', 'sections', schema='tura')
+    op.drop_column('business_cards', 'sections')

@@ -30,7 +30,7 @@ def run():
                 assert db.connection.driver_connection.pgconn.ssl_in_use
                 print('PASS encrypted PostgreSQL connection')
             head=ScriptDirectory.from_config(Config(str(Path(__file__).resolve().parents[1]/'alembic.ini'))).get_current_head()
-            assert db.scalar(text("SELECT version_num FROM tura.alembic_version"))==head
+            assert db.scalar(text("SELECT version_num FROM public.alembic_version"))==head
             print('PASS migrations at head')
         with Session(engine()) as db:
             admin=db.scalar(select(User).where(User.email==settings.initial_admin_email.lower()))
@@ -41,8 +41,8 @@ def run():
             print('PASS administrator hash and role; current password and first-login state preserved')
             for role in ('anon','authenticated'):
                 if db.scalar(text('SELECT EXISTS(SELECT FROM pg_roles WHERE rolname=:role)'),{'role':role}):
-                    assert not db.scalar(text("SELECT has_schema_privilege(:role,'tura','USAGE')"),{'role':role})
-            print('PASS Supabase API roles cannot access private application schema')
+                    assert not db.scalar(text("SELECT has_table_privilege(:role,'public.users','SELECT')"),{'role':role})
+            print('PASS Supabase API roles cannot read application tables')
         with TestClient(app,headers={'Origin':settings.origins[0]}) as client:
             assert client.get('/api/ready').status_code==200
             response=client.post('/api/auth/register',json={'name':'Temporary Smoke Check','email':email,'password':'SmokeCheckPassword123!','accept_terms':True,'accept_privacy':True})

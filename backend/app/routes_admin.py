@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 from .db import get_db
-from .models import User, Code, Event, Audit, Project
+from .models import User, Code, Event, Audit, Project, Plan, Subscription
 from .schemas import AdminUserUpdate
 from .security import admin_user, public_user, audit, revoke_sessions, throttle
 from .routes_auth import new_reset
@@ -25,7 +25,8 @@ def users(q:str=Query('',max_length=100),page:int=Query(1,ge=1),actor:User=Depen
     if q: query=query.where(User.email.ilike('%'+q+'%') | User.name.ilike('%'+q+'%'))
     total=db.scalar(select(func.count()).select_from(query.subquery()))
     rows=db.scalars(query.order_by(User.created_at.desc()).offset((page-1)*20).limit(20)).all()
-    return {'items':[{**public_user(u),'accepted_terms_at':u.accepted_terms_at,'policy_version':u.policy_version} for u in rows],'total':total}
+    plans=dict(db.execute(select(Subscription.user_id,Plan.name).join(Plan).where(Subscription.user_id.in_([u.id for u in rows]))).all())
+    return {'items':[{**public_user(u),'accepted_terms_at':u.accepted_terms_at,'policy_version':u.policy_version,'plan':plans.get(u.id)} for u in rows],'total':total}
 
 
 @router.patch('/users/{user_id}')

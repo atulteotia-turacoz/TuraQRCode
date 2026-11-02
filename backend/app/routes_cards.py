@@ -12,6 +12,7 @@ from .config import settings
 from .db import get_db
 from .models import BusinessCard, Code, User
 from .projects import default_project
+from .billing import require_quota
 from .qr import render, vcard
 from .routes_codes import code_payload, html_page, owned
 from .schemas import CardInput, Design, luminance, readable_ink
@@ -63,6 +64,7 @@ def list_cards(user:User=Depends(ready_user),db:Session=Depends(get_db)):
 
 @router.post('/api/cards',status_code=201)
 def create_card(data:CardInput,user:User=Depends(ready_user),db:Session=Depends(get_db)):
+    require_quota(db,user,'cards')
     card=BusinessCard(user_id=user.id,slug=secrets.token_urlsafe(8),**data.model_dump())
     db.add(card)
     db.flush()

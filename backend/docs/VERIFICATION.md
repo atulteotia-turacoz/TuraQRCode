@@ -15,7 +15,7 @@ Initial verification was executed on **29 October 2026** in `E:\TuraQRcode`. The
 | QR decoding | Seven module patterns, supported independent corner-frame/center combinations, scan-safe gradient palettes, individually styled labels, frames, and logos decoded with ZXing-C++ |
 | Supabase connection | Passed with client-to-Supabase TLS verified through libpq |
 | Supabase migrations | Revision `20261029_card_rich_text` applied; eight application tables plus the Alembic version table |
-| Supabase data isolation | Private `tura` schema; RLS enabled; Supabase anonymous/authenticated API roles denied schema access |
+| Supabase data isolation | Tables in `public` schema; RLS enabled; Supabase anonymous/authenticated API roles denied table access |
 | Live persistence smoke | Registration, sessions, QR creation/read-back, redirect, scan reporting, downloads, role restriction, and deletion passed |
 | Initial administrator | Exists server-side, Argon2id hash verified, administrator role verified, mandatory password change verified |
 

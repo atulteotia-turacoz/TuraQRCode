@@ -20,7 +20,7 @@ def artwork():
 
 
 @pytest.mark.parametrize('size',[256,354,1024,1080,1200,2480,3000])
-def test_every_export_size_is_exact_square_and_pdf_physical_size_changes(client,size):
+def test_every_export_size_is_exact_square_and_pdf_physical_size_changes(client,size,member):
     body={'content':{'url':'https://example.com/square'},'design':{'top_text':'HELLO','bottom_text':'WELCOME','frame':'border','logo':artwork()}}
     png=client.post(f'/api/qr/preview?format=png&size={size}',json=body)
     assert png.status_code==200,png.text
@@ -67,7 +67,7 @@ def test_qr_preview_saved_barcode_auth_and_unsaved_design(client,member):
     assert client.post('/api/qr/preview',json=body).status_code==401
 
 
-def test_barcode_svg_caption_uses_the_same_units_as_its_viewbox(client):
+def test_barcode_svg_caption_uses_the_same_units_as_its_viewbox(client,member):
     result=client.post('/api/qr/preview?format=svg&size=2048',json={'kind':'barcode','content':{'format':'code128','value':'TURA-2026-001'},'design':{'barcode_font_size':11}})
     assert result.status_code==200,result.text
     assert b'11pt' not in result.content

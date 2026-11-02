@@ -209,7 +209,7 @@ cd /home/tura/apps/TuraQRcode/backend
 .venv/bin/python -m app.manage init
 ```
 
-`init` applies migrations and creates the initial administrator only if missing. Later deployments normally use `app.manage migrate`. Do not recreate tables manually or delete the existing `tura` schema to update the application.
+`init` applies migrations and creates the initial administrator only if missing. Later deployments normally use `app.manage migrate`. Do not recreate tables manually or delete the existing application tables to update the application.
 
 If connection checking fails, fix the URI/password/SSL/network access before starting the service. Never run destructive test launchers against Supabase. Establish a protected Supabase backup/restore procedure before applying future migrations to valuable data.
 
@@ -485,7 +485,7 @@ Replace `PREVIOUS_COMMIT` with the SHA recorded before the pull.
 
 ## 14. Rollback
 
-If a deployment fails, leave the service stopped while investigating. Restore the previously retained customer/admin build artifacts, the recorded application revision, and its dependencies as appropriate. Use a reviewed checkout/deployment revision rather than blindly resetting a live worktree. Never delete `.env`, the Supabase database, or the `tura` schema to repair a deployment.
+If a deployment fails, leave the service stopped while investigating. Restore the previously retained customer/admin build artifacts, the recorded application revision, and its dependencies as appropriate. Use a reviewed checkout/deployment revision rather than blindly resetting a live worktree. Never delete `.env`, the Supabase database, or the application tables to repair a deployment.
 
 Database migrations may change data or remove columns. Reverting Git does not revert PostgreSQL. Decide whether the previous application is compatible with the new schema; otherwise use your tested database restore procedure or a reviewed corrective migration. Do not blindly execute an Alembic downgrade against valuable production data.
 

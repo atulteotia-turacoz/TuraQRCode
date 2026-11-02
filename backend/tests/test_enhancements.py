@@ -26,7 +26,7 @@ def test_barcode_encoder_ignores_conflicting_barcode_package(monkeypatch):
 
 @pytest.mark.parametrize('pattern',['square','rounded','dots','soft','diamond','horizontal','vertical'])
 @pytest.mark.parametrize('eye',['square','rounded','circle'])
-def test_every_pattern_and_corner_combination_decodes(client,pattern,eye):
+def test_every_pattern_and_corner_combination_decodes(client,pattern,eye,member):
     value='https://example.com/campaign?id=2026'
     r=client.post('/api/qr/preview?format=png',json={'content':{'url':value},'design':{
         'pattern':pattern,'eye_style':eye,'eye_color':'#4338ca','foreground':'#163b75',
@@ -136,7 +136,7 @@ def test_static_barcode_caption_can_be_changed_without_changing_encoded_value(cl
     {'format':'code39','value':'lowercase'}, {'format':'code128','value':'界'},
     {'format':'unknown','value':'123'}, {'format':'code128','value':'Hello','show_text':'false'},
 ])
-def test_invalid_barcodes_rejected(client,content):
+def test_invalid_barcodes_rejected(client,content,member):
     assert client.post('/api/qr/preview',json={'kind':'barcode','content':content}).status_code==422
 
 
@@ -206,14 +206,14 @@ def test_disconnected_password_submission_is_handled_without_database_work():
     asyncio.run(run())
 
 
-def test_border_frame_preserves_scannable_quiet_zone(client):
+def test_border_frame_preserves_scannable_quiet_zone(client,member):
     r=client.post('/api/qr/preview?format=png',json={'content':{'url':'https://example.com/bordered'},
         'design':{'frame':'border','pattern':'soft','eye_style':'rounded'}})
     assert r.status_code==200
     assert decode(r.content).text=='https://example.com/bordered'
 
 
-def test_qr_labels_and_separate_marker_shapes_are_exported_and_scannable(client):
+def test_qr_labels_and_separate_marker_shapes_are_exported_and_scannable(client,member):
     design={'foreground':'#163b75','background':'#ffffff','pattern':'dots',
         'eye_frame_style':'rounded','eye_ball_style':'diamond','frame':'scan',
         'top_text':'WELCOME','bottom_text':'VISIT OUR SITE','text_size':28,
@@ -231,7 +231,7 @@ def test_qr_labels_and_separate_marker_shapes_are_exported_and_scannable(client)
 @pytest.mark.parametrize('start,end,angle',[
     ('#e0f2fe','#dbeafe',0),('#ede9fe','#fae8ff',45),('#fff7ed','#ffedd5',135),
 ])
-def test_gradient_qr_exports_keep_contrast_and_scan(client,start,end,angle):
+def test_gradient_qr_exports_keep_contrast_and_scan(client,start,end,angle,member):
     destination='https://example.com/gradient-'+str(angle)
     design={'foreground':'#102a56','background':start,'background_end':end,'background_angle':angle,
         'pattern':'dots','eye_frame_style':'rounded','eye_ball_style':'circle',
@@ -250,7 +250,7 @@ def test_gradient_qr_exports_keep_contrast_and_scan(client,start,end,angle):
     assert pdf.status_code==200 and pdf.content.startswith(b'%PDF')
 
 
-def test_gradient_qr_rejects_low_contrast_stop(client):
+def test_gradient_qr_rejects_low_contrast_stop(client,member):
     response=client.post('/api/qr/preview',json={'content':{'url':'https://example.com'},'design':{
         'foreground':'#111111','background':'#ffffff','background_end':'#222222'}})
     assert response.status_code==422
@@ -262,7 +262,7 @@ def test_gradient_qr_rejects_low_contrast_stop(client):
     {'foreground':'#ffffff','background':'#000000','pattern':'dots'},
     {'foreground':'#ffffff','foreground_end':'#bfdbfe','background':'#050816','background_end':'#14213d','pattern':'square'},
 ])
-def test_light_dark_and_gradient_ink_combinations_remain_scannable(client,design):
+def test_light_dark_and_gradient_ink_combinations_remain_scannable(client,design,member):
     value='https://example.com/palette-scan'
     response=client.post('/api/qr/preview?format=png',json={'content':{'url':value},'design':design})
     assert response.status_code==200,response.text
@@ -321,7 +321,7 @@ def test_all_one_hundred_coordinated_qr_presets_are_contrast_safe_and_decodable(
 
 @pytest.mark.parametrize('outer',['square','rounded','circle'])
 @pytest.mark.parametrize('center',['square','rounded','circle','diamond'])
-def test_independent_corner_marker_shapes_still_scan(client,outer,center):
+def test_independent_corner_marker_shapes_still_scan(client,outer,center,member):
     r=client.post('/api/qr/preview?format=png',json={'content':{'url':'https://example.com/finder-shapes'},'design':{
         'foreground':'#12315b','background':'#ffffff','eye_frame_style':outer,'eye_ball_style':center}})
     if outer=='square' and center=='diamond':
@@ -355,7 +355,7 @@ def test_independent_corner_marker_shapes_still_scan(client,outer,center):
     ('#0c4a6e','#f0f9ff','#e0f2fe',90,'vertical','rounded','circle'),
     ('#3b0764','#faf5ff','#ede9fe',135,'soft','rounded','circle'),
 ])
-def test_coordinated_qr_recipes_remain_scannable(client,foreground,background,end,angle,pattern,frame,center):
+def test_coordinated_qr_recipes_remain_scannable(client,foreground,background,end,angle,pattern,frame,center,member):
     destination='https://example.com/style-recipe'
     design={'foreground':foreground,'background':background,'background_end':end,'background_angle':angle,
         'pattern':pattern,'eye_frame_style':frame,'eye_ball_style':center,
@@ -366,7 +366,7 @@ def test_coordinated_qr_recipes_remain_scannable(client,foreground,background,en
     assert decoded and decoded.text==destination
 
 
-def test_independent_label_colors_and_vertical_offsets_are_rendered(client):
+def test_independent_label_colors_and_vertical_offsets_are_rendered(client,member):
     base={'foreground':'#163b75','background':'#ffffff','top_text':'TOP LABEL','bottom_text':'MOVE',
         'top_text_color':'#0f172a','bottom_text_color':'#075985','top_text_italic':True,'bottom_text_bold':False}
     def bottom_y(offset):

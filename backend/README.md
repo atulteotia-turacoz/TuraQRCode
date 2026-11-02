@@ -44,7 +44,7 @@ Static content is immutable and does not report scans. Downloaded static QR code
 
 ## Database and security
 
-Application tables live in the private PostgreSQL `tura` schema, with RLS enabled and schema/table privileges revoked from `PUBLIC`, Supabase `anon`, and `authenticated`. Use the trusted server owner/database role, never the publishable key, for backend connections. Do not add `tura` to Supabase exposed schemas. The server enforces ownership and administrator roles independently of RLS. Migrations are in `migrations/versions`; run `python -m app.manage migrate` for later schema upgrades.
+Application tables live in the PostgreSQL `public` schema, with RLS enabled and table privileges revoked from `PUBLIC`, Supabase `anon`, and `authenticated`. Use the trusted server owner/database role, never the publishable key, for backend connections. The server enforces ownership and administrator roles independently of RLS. Migrations are in `migrations/versions`; run `python -m app.manage migrate` for later schema upgrades.
 
 Remote connections require TLS. A supplied `verify-ca` or `verify-full` setting is preserved; otherwise the backend enforces `sslmode=require`. For certificate identity verification in production, configure `sslmode=verify-full` and an appropriate trusted root certificate using Supabase’s SSL guidance.
 
@@ -100,6 +100,14 @@ docker compose up --build -d
 ```
 
 Docker Desktop was not running in the development environment; Docker deployment is supplied but not an executed verification result. Review the initial Terms and Privacy content for your operating practices before public launch.
+
+## SaaS mode and administration
+
+The administration app controls the commercial model under **SaaS and plans**. With SaaS off (the default), the website shows sign in only, `/api/auth/register` is refused, and accounts are created under **Accounts**. With SaaS on, the website shows plans and sign-up, and each account's plan limits apply to new codes, business cards and projects. Existing items keep working when a limit is reached or a plan lapses.
+
+Creating a QR code or barcode always requires signing in. Administrator accounts sign in only through the administration app.
+
+**Landing page** edits all public website text, **Email (SMTP)** replaces the `SMTP_*` environment values, and **Payment gateways** configures Razorpay, Stripe and CCAvenue. Customers pay on the provider's hosted page; plans are prepaid for 30 or 365 days and do not renew automatically. SMTP passwords and gateway keys are encrypted with a key derived from `SECRET_KEY`, so changing `SECRET_KEY` means re-entering them.
 
 Reference sources: [Supabase PostgreSQL connection guidance](https://supabase.com/docs/guides/database/connecting-to-postgres), [FastAPI security guidance](https://fastapi.tiangolo.com/tutorial/security/oauth2-jwt/). QRStuff was consulted for [feature reference only](https://www.qrstuff.com/).
 

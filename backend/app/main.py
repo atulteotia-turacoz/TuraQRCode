@@ -8,11 +8,11 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from .config import settings
 from .db import engine
-from .security import COOKIE
-from . import routes_auth, routes_codes, routes_cards, routes_admin
+from .security import ADMIN_COOKIE, APP_HEADER, COOKIE
+from . import routes_auth, routes_codes, routes_cards, routes_admin, routes_billing, routes_saas_admin
 
 app=FastAPI(title='TuraQRcode API',version='1.0.0',description='Turacoz QR and short-link service',docs_url='/api/docs',openapi_url='/api/openapi.json')
-app.add_middleware(CORSMiddleware,allow_origins=settings.trusted_origins,allow_credentials=True,allow_methods=['GET','POST','PATCH','DELETE','OPTIONS'],allow_headers=['Content-Type'])
+app.add_middleware(CORSMiddleware,allow_origins=settings.trusted_origins,allow_credentials=True,allow_methods=['GET','POST','PATCH','DELETE','OPTIONS'],allow_headers=['Content-Type',APP_HEADER])
 
 
 @app.middleware('http')
@@ -21,7 +21,8 @@ async def security_headers(request:Request,call_next):
         origin=request.headers.get('origin')
         allowed=set(settings.trusted_origins)
         # HTML forms and API requests must originate from an approved first-party site.
-        if (origin and origin not in allowed) or (request.cookies.get(COOKIE) and not origin):
+        # Gateway callbacks come from the provider and carry its own signature.
+        if not request.url.path.startswith('/api/billing/gateway/') and ((origin and origin not in allowed) or ((COOKIE in request.cookies or ADMIN_COOKIE in request.cookies) and not origin)):
             return JSONResponse({'detail':'This request could not be verified. Please refresh the page and try again.'},403)
         try: length=int(request.headers.get('content-length','0'))
         except ValueError: return JSONResponse({'detail':'Invalid request.'},400)
@@ -77,11 +78,11 @@ def health(): return {'status':'ok'}
 def ready():
     try:
         with engine().connect() as connection:
-            connection.execute(text('SELECT id FROM tura.users LIMIT 1'))
+            connection.execute(text('SELECT id FROM users LIMIT 1'))
         return {'status':'ready'}
     except Exception:
         return JSONResponse({'status':'unavailable'},503)
 
 
-for router in (routes_auth.router,routes_codes.router,routes_cards.router,routes_admin.router):
+for router in (routes_auth.router,routes_codes.router,routes_cards.router,routes_admin.router,routes_billing.router,routes_saas_admin.router):
     app.include_router(router)

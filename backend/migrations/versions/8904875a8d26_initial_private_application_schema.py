@@ -26,21 +26,19 @@ def upgrade():
     sa.Column('accepted_terms_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('policy_version', sa.String(length=20), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
-    sa.PrimaryKeyConstraint('id', name=op.f('pk_users')),
-    schema='tura'
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_users'))
     )
-    op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True, schema='tura')
+    op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
     op.create_table('audit_log',
     sa.Column('id', sa.String(length=36), nullable=False),
     sa.Column('actor_id', sa.String(length=36), nullable=True),
     sa.Column('action', sa.String(length=100), nullable=False),
     sa.Column('target', sa.String(length=254), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
-    sa.ForeignKeyConstraint(['actor_id'], ['tura.users.id'], name=op.f('fk_audit_log_actor_id_users'), ondelete='SET NULL'),
-    sa.PrimaryKeyConstraint('id', name=op.f('pk_audit_log')),
-    schema='tura'
+    sa.ForeignKeyConstraint(['actor_id'], ['users.id'], name=op.f('fk_audit_log_actor_id_users'), ondelete='SET NULL'),
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_audit_log'))
     )
-    op.create_index(op.f('ix_audit_log_created_at'), 'audit_log', ['created_at'], unique=False, schema='tura')
+    op.create_index(op.f('ix_audit_log_created_at'), 'audit_log', ['created_at'], unique=False)
     op.create_table('business_cards',
     sa.Column('id', sa.String(length=36), nullable=False),
     sa.Column('user_id', sa.String(length=36), nullable=False),
@@ -53,44 +51,40 @@ def upgrade():
     sa.Column('website', sa.Text(), nullable=False),
     sa.Column('color', sa.String(length=7), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
-    sa.ForeignKeyConstraint(['user_id'], ['tura.users.id'], name=op.f('fk_business_cards_user_id_users'), ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], name=op.f('fk_business_cards_user_id_users'), ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_business_cards')),
-    sa.UniqueConstraint('slug', name=op.f('uq_business_cards_slug')),
-    schema='tura'
+    sa.UniqueConstraint('slug', name=op.f('uq_business_cards_slug'))
     )
-    op.create_index(op.f('ix_business_cards_user_id'), 'business_cards', ['user_id'], unique=False, schema='tura')
+    op.create_index(op.f('ix_business_cards_user_id'), 'business_cards', ['user_id'], unique=False)
     op.create_table('projects',
     sa.Column('id', sa.String(length=36), nullable=False),
     sa.Column('user_id', sa.String(length=36), nullable=False),
     sa.Column('name', sa.String(length=100), nullable=False),
     sa.Column('color', sa.String(length=7), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
-    sa.ForeignKeyConstraint(['user_id'], ['tura.users.id'], name=op.f('fk_projects_user_id_users'), ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id', name=op.f('pk_projects')),
-    schema='tura'
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], name=op.f('fk_projects_user_id_users'), ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_projects'))
     )
-    op.create_index(op.f('ix_projects_user_id'), 'projects', ['user_id'], unique=False, schema='tura')
+    op.create_index(op.f('ix_projects_user_id'), 'projects', ['user_id'], unique=False)
     op.create_table('reset_tokens',
     sa.Column('token_hash', sa.String(length=64), nullable=False),
     sa.Column('user_id', sa.String(length=36), nullable=False),
     sa.Column('expires_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('used', sa.Boolean(), nullable=False),
-    sa.ForeignKeyConstraint(['user_id'], ['tura.users.id'], name=op.f('fk_reset_tokens_user_id_users'), ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('token_hash', name=op.f('pk_reset_tokens')),
-    schema='tura'
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], name=op.f('fk_reset_tokens_user_id_users'), ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('token_hash', name=op.f('pk_reset_tokens'))
     )
-    op.create_index(op.f('ix_reset_tokens_user_id'), 'reset_tokens', ['user_id'], unique=False, schema='tura')
+    op.create_index(op.f('ix_reset_tokens_user_id'), 'reset_tokens', ['user_id'], unique=False)
     op.create_table('sessions',
     sa.Column('token_hash', sa.String(length=64), nullable=False),
     sa.Column('user_id', sa.String(length=36), nullable=False),
     sa.Column('expires_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
-    sa.ForeignKeyConstraint(['user_id'], ['tura.users.id'], name=op.f('fk_sessions_user_id_users'), ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('token_hash', name=op.f('pk_sessions')),
-    schema='tura'
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], name=op.f('fk_sessions_user_id_users'), ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('token_hash', name=op.f('pk_sessions'))
     )
-    op.create_index(op.f('ix_sessions_expires_at'), 'sessions', ['expires_at'], unique=False, schema='tura')
-    op.create_index(op.f('ix_sessions_user_id'), 'sessions', ['user_id'], unique=False, schema='tura')
+    op.create_index(op.f('ix_sessions_expires_at'), 'sessions', ['expires_at'], unique=False)
+    op.create_index(op.f('ix_sessions_user_id'), 'sessions', ['user_id'], unique=False)
     op.create_table('codes',
     sa.Column('id', sa.String(length=36), nullable=False),
     sa.Column('user_id', sa.String(length=36), nullable=False),
@@ -107,15 +101,14 @@ def upgrade():
     sa.Column('mobile_url', sa.Text(), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
-    sa.ForeignKeyConstraint(['project_id'], ['tura.projects.id'], name=op.f('fk_codes_project_id_projects'), ondelete='SET NULL'),
-    sa.ForeignKeyConstraint(['user_id'], ['tura.users.id'], name=op.f('fk_codes_user_id_users'), ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id', name=op.f('pk_codes')),
-    schema='tura'
+    sa.ForeignKeyConstraint(['project_id'], ['projects.id'], name=op.f('fk_codes_project_id_projects'), ondelete='SET NULL'),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], name=op.f('fk_codes_user_id_users'), ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_codes'))
     )
-    op.create_index(op.f('ix_codes_created_at'), 'codes', ['created_at'], unique=False, schema='tura')
-    op.create_index(op.f('ix_codes_project_id'), 'codes', ['project_id'], unique=False, schema='tura')
-    op.create_index(op.f('ix_codes_slug'), 'codes', ['slug'], unique=True, schema='tura')
-    op.create_index(op.f('ix_codes_user_id'), 'codes', ['user_id'], unique=False, schema='tura')
+    op.create_index(op.f('ix_codes_created_at'), 'codes', ['created_at'], unique=False)
+    op.create_index(op.f('ix_codes_project_id'), 'codes', ['project_id'], unique=False)
+    op.create_index(op.f('ix_codes_slug'), 'codes', ['slug'], unique=True)
+    op.create_index(op.f('ix_codes_user_id'), 'codes', ['user_id'], unique=False)
     op.create_table('events',
     sa.Column('id', sa.String(length=36), nullable=False),
     sa.Column('code_id', sa.String(length=36), nullable=False),
@@ -123,27 +116,23 @@ def upgrade():
     sa.Column('device', sa.String(length=20), nullable=False),
     sa.Column('referrer', sa.String(length=253), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
-    sa.ForeignKeyConstraint(['code_id'], ['tura.codes.id'], name=op.f('fk_events_code_id_codes'), ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id', name=op.f('pk_events')),
-    schema='tura'
+    sa.ForeignKeyConstraint(['code_id'], ['codes.id'], name=op.f('fk_events_code_id_codes'), ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_events'))
     )
-    op.create_index('ix_events_code_created', 'events', ['code_id', 'created_at'], unique=False, schema='tura')
-    op.create_index(op.f('ix_events_code_id'), 'events', ['code_id'], unique=False, schema='tura')
-    op.create_index(op.f('ix_events_created_at'), 'events', ['created_at'], unique=False, schema='tura')
+    op.create_index('ix_events_code_created', 'events', ['code_id', 'created_at'], unique=False)
+    op.create_index(op.f('ix_events_code_id'), 'events', ['code_id'], unique=False)
+    op.create_index(op.f('ix_events_created_at'), 'events', ['created_at'], unique=False)
     # Only the server database role may access application data. The Supabase
     # publishable key must never expose password hashes or server sessions.
-    op.execute('REVOKE ALL ON SCHEMA tura FROM PUBLIC')
     for table in ('users','audit_log','business_cards','projects','reset_tokens','sessions','codes','events'):
-        op.execute(f'ALTER TABLE tura.{table} ENABLE ROW LEVEL SECURITY')
-        op.execute(f'REVOKE ALL ON TABLE tura.{table} FROM PUBLIC')
+        op.execute(f'ALTER TABLE {table} ENABLE ROW LEVEL SECURITY')
+        op.execute(f'REVOKE ALL ON TABLE {table} FROM PUBLIC')
     op.execute("""DO $$ BEGIN
         IF EXISTS (SELECT FROM pg_roles WHERE rolname='anon') THEN
-            REVOKE ALL ON SCHEMA tura FROM anon;
-            REVOKE ALL ON ALL TABLES IN SCHEMA tura FROM anon;
+            REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon;
         END IF;
         IF EXISTS (SELECT FROM pg_roles WHERE rolname='authenticated') THEN
-            REVOKE ALL ON SCHEMA tura FROM authenticated;
-            REVOKE ALL ON ALL TABLES IN SCHEMA tura FROM authenticated;
+            REVOKE ALL ON ALL TABLES IN SCHEMA public FROM authenticated;
         END IF;
     END $$""")
     # ### end Alembic commands ###
@@ -151,26 +140,26 @@ def upgrade():
 
 def downgrade():
     # ### commands auto generated by Alembic - please adjust! ###
-    op.drop_index(op.f('ix_events_created_at'), table_name='events', schema='tura')
-    op.drop_index(op.f('ix_events_code_id'), table_name='events', schema='tura')
-    op.drop_index('ix_events_code_created', table_name='events', schema='tura')
-    op.drop_table('events', schema='tura')
-    op.drop_index(op.f('ix_codes_user_id'), table_name='codes', schema='tura')
-    op.drop_index(op.f('ix_codes_slug'), table_name='codes', schema='tura')
-    op.drop_index(op.f('ix_codes_project_id'), table_name='codes', schema='tura')
-    op.drop_index(op.f('ix_codes_created_at'), table_name='codes', schema='tura')
-    op.drop_table('codes', schema='tura')
-    op.drop_index(op.f('ix_sessions_user_id'), table_name='sessions', schema='tura')
-    op.drop_index(op.f('ix_sessions_expires_at'), table_name='sessions', schema='tura')
-    op.drop_table('sessions', schema='tura')
-    op.drop_index(op.f('ix_reset_tokens_user_id'), table_name='reset_tokens', schema='tura')
-    op.drop_table('reset_tokens', schema='tura')
-    op.drop_index(op.f('ix_projects_user_id'), table_name='projects', schema='tura')
-    op.drop_table('projects', schema='tura')
-    op.drop_index(op.f('ix_business_cards_user_id'), table_name='business_cards', schema='tura')
-    op.drop_table('business_cards', schema='tura')
-    op.drop_index(op.f('ix_audit_log_created_at'), table_name='audit_log', schema='tura')
-    op.drop_table('audit_log', schema='tura')
-    op.drop_index(op.f('ix_users_email'), table_name='users', schema='tura')
-    op.drop_table('users', schema='tura')
+    op.drop_index(op.f('ix_events_created_at'), table_name='events')
+    op.drop_index(op.f('ix_events_code_id'), table_name='events')
+    op.drop_index('ix_events_code_created', table_name='events')
+    op.drop_table('events')
+    op.drop_index(op.f('ix_codes_user_id'), table_name='codes')
+    op.drop_index(op.f('ix_codes_slug'), table_name='codes')
+    op.drop_index(op.f('ix_codes_project_id'), table_name='codes')
+    op.drop_index(op.f('ix_codes_created_at'), table_name='codes')
+    op.drop_table('codes')
+    op.drop_index(op.f('ix_sessions_user_id'), table_name='sessions')
+    op.drop_index(op.f('ix_sessions_expires_at'), table_name='sessions')
+    op.drop_table('sessions')
+    op.drop_index(op.f('ix_reset_tokens_user_id'), table_name='reset_tokens')
+    op.drop_table('reset_tokens')
+    op.drop_index(op.f('ix_projects_user_id'), table_name='projects')
+    op.drop_table('projects')
+    op.drop_index(op.f('ix_business_cards_user_id'), table_name='business_cards')
+    op.drop_table('business_cards')
+    op.drop_index(op.f('ix_audit_log_created_at'), table_name='audit_log')
+    op.drop_table('audit_log')
+    op.drop_index(op.f('ix_users_email'), table_name='users')
+    op.drop_table('users')
     # ### end Alembic commands ###

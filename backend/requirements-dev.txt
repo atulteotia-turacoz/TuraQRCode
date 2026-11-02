@@ -1,5 +1,4 @@
 -r requirements.txt
-httpx==0.28.1
 pytest==9.2.0
 zxing-cpp==3.1.1
 pypdf==6.21.4

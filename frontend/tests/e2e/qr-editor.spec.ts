@@ -1,12 +1,13 @@
 import {test,expect,type Page} from '@playwright/test';
 import {readFile} from 'node:fs/promises';
+async function register(page:import('@playwright/test').Page){await page.goto('/register');await page.getByLabel('Full name').fill('Frame Review');await page.getByLabel('Email address').fill(`frame-logo-${Date.now()}@example.com`);await page.getByLabel('Password',{exact:true}).fill('FrameReview123!');await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Create account',exact:true}).click();await expect(page).toHaveURL(/\/app$/);}
 
 function nextPreview(page:Page,matches:(design:Record<string,unknown>)=>boolean){
  return page.waitForResponse(response=>response.url().includes('/api/qr/preview?')&&response.request().method()==='POST'&&matches(response.request().postDataJSON().design));
 }
 
 for(const mode of ['dynamic','static'] as const){
- test(`clearing labels and frame text supports all frames, logos, and ${mode} QR creation`,async({page})=>{
+test(`clearing labels and frame text supports all frames, logos, and ${mode} QR creation`,async({page})=>{
   const failures:number[]=[];
   page.on('response',response=>{if(response.url().includes('/api/qr/preview?')&&response.status()>=400)failures.push(response.status());});
   await page.goto('/register');await page.getByLabel('Full name').fill('Frame Review');await page.getByLabel('Email address').fill(`frame-${mode}-${Date.now()}@example.com`);await page.getByLabel('Password',{exact:true}).fill('FrameReview123!');await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Create account',exact:true}).click();await expect(page).toHaveURL(/\/app$/);
@@ -28,7 +29,7 @@ for(const mode of ['dynamic','static'] as const){
 }
 
 test('invalid logos keep the previous design usable and the same image can be uploaded again',async({page})=>{
- await page.goto('/');await page.getByLabel('Website address').fill('https://example.com/logo-validation');await page.getByRole('tab',{name:/Design/}).click();
+ await register(page);await page.goto('/app/create');await page.getByLabel('Website address').fill('https://example.com/logo-validation');await page.getByRole('tab',{name:/Design/}).click();
  const upload=page.getByLabel('Upload logo',{exact:true});let pending=nextPreview(page,design=>Boolean(design.logo));await upload.setInputFiles('tests/fixtures/card-photo.png');expect((await pending).status()).toBe(200);const original=await page.getByAltText('Your logo',{exact:true}).getAttribute('src');
  for(const [file,text] of [
   [{name:'logo.svg',mimeType:'image/svg+xml',buffer:Buffer.from('<svg/>')},'Choose a PNG, JPG, or WebP logo.'],

@@ -27,8 +27,13 @@ from app.db import engine
 from app.manage import migrate,seed
 with engine().begin() as connection:
     assert engine().url.database=='tura_e2e' and engine().url.host=='127.0.0.1'
-    connection.execute(text('DROP SCHEMA IF EXISTS tura CASCADE'))
+    connection.execute(text('DROP SCHEMA IF EXISTS public CASCADE'));connection.execute(text('CREATE SCHEMA public'))
 migrate();seed()
+from sqlalchemy.orm import Session
+from app.models import Plan
+from app.site import set_setting
+with Session(engine()) as db:
+    db.add(Plan(name='E2E Free',price_monthly=0,price_yearly=0));set_setting(db,'saas',{'enabled':True});db.commit()
 print('Isolated end-to-end API ready. Supabase configuration is unchanged.',flush=True)
 import uvicorn
 uvicorn.run('app.main:app',host='127.0.0.1',port=8011,log_level='warning')

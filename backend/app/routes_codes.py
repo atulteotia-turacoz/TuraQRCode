@@ -21,6 +21,7 @@ from .schemas import CodeCreate, CodeUpdate, Preview, ProjectInput, validate_con
 from .security import current_user, ready_user, passwords, verify, throttle
 from .qr import payload, render_code
 from .projects import default_project
+from .billing import require_quota
 
 router=APIRouter(tags=['QR codes and links'])
 
@@ -46,6 +47,7 @@ def code_json(db,code,count=None):
 
 
 def add_code(db,data,user):
+    require_quota(db,user,'codes')
     if data.project_id: owned(db,Project,data.project_id,user)
     project_id = data.project_id or default_project(db,user.id).id
     slug=data.alias or secrets.token_urlsafe(7)
@@ -57,10 +59,11 @@ def add_code(db,data,user):
 
 @router.post('/api/qr/preview')
 def preview(data:Preview,request:Request,format:str=Query('svg',pattern='^(png|svg|pdf)$'),size:int=Query(1024,ge=256,le=4096),print_width_cm:float|None=Query(None,ge=2,le=50),print_preset:str=Query('standard',pattern='^(compact|standard|social|business_card|print|a4|high_res)$'),db:Session=Depends(get_db)):
-    throttle(request,'preview',120,60)
+    user=ready_user(current_user(request,db))
+    throttle(request,'preview',120,60,user.id)
     sample=(settings.public_base_url.rstrip('/')+'/r/preview?via=barcode') if data.kind=='barcode' and data.content.get('tracked') else None
     if data.code_id:
-        code=owned(db,Code,data.code_id,ready_user(current_user(request,db)))
+        code=owned(db,Code,data.code_id,user)
         if code.kind!=data.kind: raise HTTPException(422,'Choose the saved code’s content type.')
         sample=code_payload(code)
     raw,mime=render_code(data.kind,data.content,data.design.model_dump(),format,size,data=sample,print_width_cm=print_width_cm,print_preset=print_preset)
@@ -221,6 +224,7 @@ def projects(user:User=Depends(ready_user),db:Session=Depends(get_db)):
 
 @router.post('/api/projects',status_code=201)
 def create_project(data:ProjectInput,user:User=Depends(ready_user),db:Session=Depends(get_db)):
+    require_quota(db,user,'projects')
     p=Project(user_id=user.id,**data.model_dump()); db.add(p); db.commit()
     return {'id':p.id,'name':p.name,'color':p.color,'is_default':p.is_default,'total_codes':0,'created_at':p.created_at}
 

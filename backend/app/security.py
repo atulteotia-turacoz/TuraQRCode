@@ -15,6 +15,8 @@ from .models import User, AuthSession, Audit, now
 passwords = PasswordHash.recommended()
 DUMMY_HASH = passwords.hash(secrets.token_urlsafe(32))
 COOKIE = 'tura_session'
+ADMIN_COOKIE = 'tura_admin_session'
+APP_HEADER = 'X-Tura-App'
 attempts = defaultdict(deque)
 lock = threading.Lock()
 
@@ -49,16 +51,21 @@ def public_user(user):
     return {k:getattr(user,k) for k in ('id','name','email','is_admin','is_active','must_change_password','created_at')}
 
 
-def create_session(db: Session, user: User, response: Response):
+def cookie_name(request: Request):
+    """Cookies ignore ports, so each app keeps its own session on a shared host."""
+    return ADMIN_COOKIE if request.headers.get(APP_HEADER) == 'admin' else COOKIE
+
+
+def create_session(db: Session, user: User, response: Response, request: Request):
     token = secrets.token_urlsafe(48)
     db.execute(delete(AuthSession).where(AuthSession.expires_at < now()))
     db.add(AuthSession(token_hash=digest(token),user_id=user.id,expires_at=now()+timedelta(hours=settings.session_hours)))
     db.commit()
-    response.set_cookie(COOKIE,token,max_age=settings.session_hours*3600,httponly=True,secure=settings.cookie_secure,samesite='lax',path='/')
+    response.set_cookie(cookie_name(request),token,max_age=settings.session_hours*3600,httponly=True,secure=settings.cookie_secure,samesite='lax',path='/')
 
 
 def current_user(request: Request, db: Session=Depends(get_db)):
-    token = request.cookies.get(COOKIE)
+    token = request.cookies.get(cookie_name(request))
     if not token: raise HTTPException(401,'Please sign in to continue.')
     session = db.get(AuthSession,digest(token))
     if not session or session.expires_at <= now(): raise HTTPException(401,'Your session has expired. Please sign in again.')

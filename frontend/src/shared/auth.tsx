@@ -7,7 +7,8 @@ type Auth={user:User|null;loading:boolean;setUser:(user:User|null)=>void;logout:
 const Context=createContext<Auth>(null!);
 export function AuthProvider({children}:{children:ReactNode}){
   const [user,setUser]=useState<User|null>(null);const [loading,setLoading]=useState(true);
-  useEffect(()=>{api<User>('/api/auth/me').then(setUser).catch(()=>setUser(null)).finally(()=>setLoading(false));},[]);
+  // Administrators work in the administration app. Local apps share a cookie across ports.
+  useEffect(()=>{api<User>('/api/auth/me').then(value=>setUser(value.is_admin?null:value)).catch(()=>setUser(null)).finally(()=>setLoading(false));},[]);
   async function logout(){await post('/api/auth/logout',{});setUser(null);}
   return <Context.Provider value={{user,loading,setUser,logout}}>{children}</Context.Provider>;
 }

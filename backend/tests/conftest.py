@@ -15,6 +15,8 @@ if parsed.host not in ('localhost','127.0.0.1') or parsed.database!='tura_test':
 os.environ['DATABASE_URL']=url
 os.environ['PUBLIC_BASE_URL']='http://testserver'
 os.environ['INITIAL_ADMIN_PASSWORD']='Admin'
+os.environ['INITIAL_ADMIN_EMAIL']='Admin@turacoz.com'
+os.environ['SECRET_KEY']='test-only-secret-key-not-for-production'
 
 from app.main import app
 from app.db import engine
@@ -26,10 +28,16 @@ from fastapi.testclient import TestClient
 @pytest.fixture(scope='session',autouse=True)
 def database():
     assert engine().url.host in ('localhost','127.0.0.1') and engine().url.database=='tura_test'
-    with engine().begin() as c: c.execute(text('DROP SCHEMA IF EXISTS tura CASCADE'))
+    with engine().begin() as c: c.execute(text('DROP SCHEMA IF EXISTS public CASCADE')); c.execute(text('CREATE SCHEMA public'))
     migrate(); seed()
+    # The product suites exercise self-service accounts on an unlimited free plan.
+    from sqlalchemy.orm import Session
+    from app.models import Plan
+    from app.site import set_setting
+    with Session(engine()) as db:
+        db.add(Plan(name='Test Free',price_monthly=0,price_yearly=0)); set_setting(db,'saas',{'enabled':True}); db.commit()
     yield
-    with engine().begin() as c: c.execute(text('DROP SCHEMA tura CASCADE'))
+    with engine().begin() as c: c.execute(text('DROP SCHEMA public CASCADE')); c.execute(text('CREATE SCHEMA public'))
 
 @pytest.fixture(autouse=True)
 def reset_limits():

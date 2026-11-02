@@ -1,11 +1,13 @@
 import {useEffect, useState} from 'react';
 import {Link, NavLink, Outlet, useLocation, useNavigate} from 'react-router-dom';
 import {
-  Activity, Barcode, ChevronRight, ContactRound, FolderOpen,
+  Activity, Barcode, ChevronRight, ContactRound, CreditCard, FolderOpen,
   LayoutDashboard, Layers, Link2, LogOut, Menu, QrCode, ScanLine, X,
 } from 'lucide-react';
 import {Brand, ErrorBox} from '../shared/ui';
 import {useAuth} from '../shared/auth';
+import {useSite} from '../shared/site';
+import {ThemeToggle} from '../shared/theme';
 import {message} from '../shared/api';
 
 const workspaceNavigation = [
@@ -28,13 +30,14 @@ function initials(name?: string) {
 
 export default function Layout() {
   const {user, logout} = useAuth();
+  const {site} = useSite();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState('');
   const location = useLocation();
   const navigate = useNavigate();
   const isLinksArea = location.pathname.startsWith('/app/links');
   const isBarcodesArea = location.pathname.startsWith('/app/barcodes');
-  const pageLabel = [...workspaceNavigation, ...manageNavigation, {to: '/app/analytics', label: 'Analytics'}]
+  const pageLabel = [...workspaceNavigation, ...manageNavigation, {to: '/app/analytics', label: 'Analytics'}, {to: '/app/billing', label: 'Billing'}]
     .find(item => 'end' in item && item.end ? location.pathname === item.to : location.pathname.startsWith(item.to))?.label
     || (isLinksArea ? 'Link shortener' : isBarcodesArea ? 'Barcodes' : location.pathname.startsWith('/app/create') ? 'Create a QR code' : 'Account settings');
 
@@ -89,6 +92,13 @@ export default function Layout() {
             <p className="sidebar-label">INSIGHTS</p>
             {renderLink({to: '/app/analytics', label: 'Analytics', icon: Activity})}
           </div>
+
+          {site?.saas_enabled && (
+            <div className="sidebar-group">
+              <p className="sidebar-label">ACCOUNT</p>
+              {renderLink({to: '/app/billing', label: 'Billing', icon: CreditCard})}
+            </div>
+          )}
         </nav>
 
         <div className="sidebar-bottom">
@@ -122,6 +132,7 @@ export default function Layout() {
             <span>{pageLabel}</span>
           </div>
           <div className="header-user">
+            <ThemeToggle />
             <span className="header-live"><i aria-hidden="true" />Your workspace is ready</span>
             <Link className="avatar" to="/app/settings" aria-label="Account settings">{initials(user?.name)}</Link>
             <span className="header-name">{user?.name}</span>

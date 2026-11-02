@@ -1,7 +1,7 @@
 import secrets
+import logging
 import smtplib
 from datetime import timedelta
-from email.message import EmailMessage
 from fastapi import APIRouter, Depends, Request, Response, HTTPException, BackgroundTasks
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -9,9 +9,12 @@ from sqlalchemy.orm import Session
 from .config import settings
 from .projects import default_project
 from .db import get_db
+from .billing import activate
+from .mail import send_email
 from .models import User, ResetToken, AuthSession, now
 from .schemas import Register, Login, PasswordChange, ForgotPassword, ResetPassword, Profile, POLICY_VERSION
-from .security import passwords, verify, DUMMY_HASH, COOKIE, throttle, public_user, create_session, current_user, ready_user, digest, revoke_sessions, audit
+from .site import active_plans, saas_enabled, smtp_config
+from .security import passwords, verify, DUMMY_HASH, cookie_name, throttle, public_user, create_session, current_user, ready_user, digest, revoke_sessions, audit
 
 router = APIRouter(prefix='/api/auth',tags=['Accounts'])
 
@@ -24,28 +27,31 @@ def new_reset(db, user):
     return settings.frontend_url.rstrip('/') + '/reset-password?token=' + token
 
 
-def send_reset(email, url):
-    message = EmailMessage()
-    message['Subject'] = 'Reset your TuraQRcode password'
-    message['From'] = settings.smtp_from
-    message['To'] = email
-    message.set_content(f'Use this link within 30 minutes to reset your TuraQRcode password:\n\n{url}\n\nIf you did not request this, you can ignore this email.\n\nTuracoz')
+def send_reset(config, email, url):
     try:
-        with smtplib.SMTP(settings.smtp_host,settings.smtp_port,timeout=15) as server:
-            if settings.smtp_starttls:
-                import ssl
-                server.starttls(context=ssl.create_default_context())
-            if settings.smtp_user: server.login(settings.smtp_user,settings.smtp_password)
-            server.send_message(message)
+        send_email(config,email,'Reset your TuraQRcode password',f'Use this link within 30 minutes to reset your TuraQRcode password:\n\n{url}\n\nIf you did not request this, you can ignore this email.\n\nTuracoz')
     except (OSError,smtplib.SMTPException):
         # Never log a reset link or credentials.
-        import logging
         logging.getLogger(__name__).warning('Password recovery email delivery failed.')
+
+
+def signup_plan(db,plan_id):
+    """Returns the chosen plan, or the first free plan when none was chosen."""
+    plans=active_plans(db)
+    if plan_id:
+        plan=next((p for p in plans if p.id==plan_id),None)
+        if not plan: raise HTTPException(400,'This plan is no longer available. Please choose another.')
+        return plan
+    plan=next((p for p in plans if p.price_monthly==0),None)
+    if plans and not plan: raise HTTPException(400,'Please choose a plan to continue.')
+    return plan
 
 
 @router.post('/register',status_code=201)
 def register(data:Register,request:Request,response:Response,db:Session=Depends(get_db)):
     throttle(request,'registration',10,3600)
+    if not saas_enabled(db): raise HTTPException(403,'New accounts are created by your administrator. Please sign in.')
+    plan=signup_plan(db,data.plan_id)
     email = str(data.email).lower()
     if db.scalar(select(User).where(User.email==email)):
         raise HTTPException(409,'An account with this email already exists. Please sign in.')
@@ -55,8 +61,9 @@ def register(data:Register,request:Request,response:Response,db:Session=Depends(
     except IntegrityError:
         db.rollback(); raise HTTPException(409,'An account with this email already exists. Please sign in.')
     default_project(db,user.id)
+    if plan and plan.price_monthly==0: activate(db,user.id,plan,'monthly',expires=False)
     audit(db,user,'account.registered',email)
-    create_session(db,user,response)
+    create_session(db,user,response,request)
     return public_user(user)
 
 
@@ -67,8 +74,10 @@ def login(data:Login,request:Request,response:Response,db:Session=Depends(get_db
     correct = verify(data.password,user.password_hash if user else DUMMY_HASH)
     if not user or not correct or not user.is_active or (data.admin and not user.is_admin):
         raise HTTPException(401,'The email or password is incorrect.')
+    if user.is_admin and not data.admin:
+        raise HTTPException(403,'Administrator accounts sign in from the administration site.')
     audit(db,user,'account.signed_in')
-    create_session(db,user,response)
+    create_session(db,user,response,request)
     return public_user(user)
 
 
@@ -79,11 +88,12 @@ def me(user:User=Depends(current_user)):
 
 @router.post('/logout',status_code=204)
 def logout(request:Request,response:Response,db:Session=Depends(get_db)):
-    token=request.cookies.get(COOKIE)
+    name=cookie_name(request)
+    token=request.cookies.get(name)
     if token:
         session=db.get(AuthSession,digest(token))
         if session: db.delete(session); db.commit()
-    response.delete_cookie(COOKIE,path='/',secure=settings.cookie_secure,httponly=True,samesite='lax')
+    response.delete_cookie(name,path='/',secure=settings.cookie_secure,httponly=True,samesite='lax')
 
 
 @router.post('/password')
@@ -95,7 +105,7 @@ def change_password(data:PasswordChange,request:Request,response:Response,user:U
     user.must_change_password=False
     revoke_sessions(db,user.id)
     audit(db,user,'account.password_changed')
-    create_session(db,user,response)
+    create_session(db,user,response,request)
     return public_user(user)
 
 
@@ -110,10 +120,11 @@ def profile(data:Profile,user:User=Depends(ready_user),db:Session=Depends(get_db
 def forgot(data:ForgotPassword,request:Request,tasks:BackgroundTasks,db:Session=Depends(get_db)):
     throttle(request,'recovery',5,900)
     user=db.scalar(select(User).where(User.email==str(data.email).lower(),User.is_active.is_(True)))
-    if user and settings.smtp_host and settings.smtp_from:
+    config=smtp_config(db)
+    if user and config:
         url=new_reset(db,user)
         db.commit()
-        tasks.add_task(send_reset,user.email,url)
+        tasks.add_task(send_reset,config,user.email,url)
     return {'message':'If an eligible account exists, password recovery instructions will be sent. If you do not receive an email, contact your account administrator.'}
 
 
@@ -131,5 +142,5 @@ def reset(data:ResetPassword,request:Request,response:Response,db:Session=Depend
     revoke_sessions(db,user.id)
     audit(db,user,'account.password_reset')
     db.commit()
-    response.delete_cookie(COOKIE,path='/')
+    response.delete_cookie(cookie_name(request),path='/')
     return {'message':'Your password has been updated. You can now sign in.'}

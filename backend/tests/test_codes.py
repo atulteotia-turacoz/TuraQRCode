@@ -68,7 +68,7 @@ def test_pause_expiration_and_reactivation(client,code):
     client.patch(endpoint,json={'is_active':False});assert client.get(link).status_code==410
     client.patch(endpoint,json={'is_active':True});assert client.patch(endpoint,json={'expires_at':(now()-timedelta(days=1)).isoformat()}).status_code==422
     from app.db import engine
-    with engine().begin() as connection: connection.execute(text('UPDATE tura.codes SET expires_at=:expiry WHERE id=:id'),{'expiry':now()-timedelta(days=1),'id':code['id']})
+    with engine().begin() as connection: connection.execute(text('UPDATE codes SET expires_at=:expiry WHERE id=:id'),{'expiry':now()-timedelta(days=1),'id':code['id']})
     assert client.get(link).status_code==410
     client.patch(endpoint,json={'expires_at':None});assert client.get(link,follow_redirects=False).status_code==302
 
@@ -110,7 +110,7 @@ def test_static_content_immutable_and_untracked(client,member):
 def test_unsafe_urls_rejected(client,member,url):
     assert client.post('/api/codes',json={'name':'Unsafe','content':{'url':url}}).status_code==422
 
-def test_low_contrast_and_active_logo_payload_rejected(client):
+def test_low_contrast_and_active_logo_payload_rejected(client,member):
     for design in [{'foreground':'#ffffff','background':'#ffffff'},{'logo':'data:image/svg+xml;base64,PHN2Zz48L3N2Zz4='}]:
         assert client.post('/api/qr/preview',json={'kind':'url','content':{'url':'https://example.com'},'design':design}).status_code==422
 
@@ -160,7 +160,7 @@ def test_filters_pagination_sort_and_delete(client,member):
     assert client.get('/api/codes/'+c['id']).status_code==404
     assert client.get('/r/'+c['slug']).status_code==404
 
-def test_guest_preview_works_without_a_database_session(client):
+def test_guest_preview_works_without_a_database_session(client,member):
     r=client.post('/api/qr/preview?format=png',json={'content':{'url':'https://example.com'}})
     assert r.status_code==200 and zxingcpp.read_barcode(Image.open(io.BytesIO(r.content))).text=='https://example.com'
 

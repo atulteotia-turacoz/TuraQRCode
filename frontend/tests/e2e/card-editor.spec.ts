@@ -45,9 +45,10 @@ test('five-row CSV downloads, creates short links and reports invalid rows',asyn
 });
 
 test('social QR generator accepts a handle and offers exports for each platform',async({page})=>{
+ await register(page);
  for(const [platform,label] of [['YouTube','YouTube URL or handle'],['Instagram','Instagram URL or handle'],['Facebook','Facebook URL or username'],['LinkedIn','LinkedIn URL or username']]){
-  await page.goto('/');await page.getByRole('button',{name:platform,exact:true}).click();await page.getByLabel(label,{exact:true}).fill('@turacoz');await expect(page.getByAltText('Your QR code preview')).toBeVisible();await expect(page.getByRole('alert')).toHaveCount(0);
-  await page.getByRole('button',{name:'Download QR code',exact:true}).click();const dialog=page.getByRole('dialog');await dialog.getByLabel('File format').selectOption('svg');const pending=page.waitForEvent('download');await dialog.getByRole('button',{name:'Download SVG',exact:true}).click();const bytes=await readFile((await(await pending).path())!);expect(bytes.toString()).toContain('<svg');
+  await page.goto('/app/create');await page.getByLabel('Code name').fill(platform);await page.getByRole('button',{name:platform,exact:true}).click();await page.getByLabel(label,{exact:true}).fill('@turacoz');await expect(page.getByAltText('Your QR code preview')).toBeVisible();await expect(page.getByRole('alert')).toHaveCount(0);
+  await page.getByRole('button',{name:'Create QR code',exact:true}).click();await expect(page).toHaveURL(/\/app\/codes\//);await page.getByRole('button',{name:'Download QR code',exact:true}).click();const dialog=page.getByRole('dialog');await dialog.getByLabel('File format').selectOption('svg');const pending=page.waitForEvent('download');await dialog.getByRole('button',{name:'Download SVG',exact:true}).click();const bytes=await readFile((await(await pending).path())!);expect(bytes.toString()).toContain('<svg');
  }
 });
 

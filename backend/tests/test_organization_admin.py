@@ -135,8 +135,7 @@ def test_admin_moderation_recovery_and_audit(client,code):
     me=admin.get('/api/auth/me').json()
     assert admin.patch('/api/admin/users/'+me['id'],json={'is_active':False}).status_code==400
 
-def test_private_schema_and_rls_present():
+def test_rls_present_on_public_tables():
     with engine().connect() as c:
-        rows=c.execute(text("SELECT relname,relrowsecurity FROM pg_class JOIN pg_namespace n ON n.oid=relnamespace WHERE n.nspname='tura' AND relkind='r' AND relname!='alembic_version'")).all()
-        assert len(rows)==8 and all(row[1] for row in rows)
-        assert not c.scalar(text("SELECT has_schema_privilege('public','tura','USAGE')")) if c.scalar(text("SELECT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='public')")) else True
+        rows=c.execute(text("SELECT relname,relrowsecurity FROM pg_class JOIN pg_namespace n ON n.oid=relnamespace WHERE n.nspname='public' AND relkind='r' AND relname!='alembic_version'")).all()
+        assert len(rows)==12 and all(row[1] for row in rows)

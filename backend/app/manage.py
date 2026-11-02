@@ -40,7 +40,7 @@ def check():
         with engine().connect() as c:
             print('PostgreSQL connection: SUCCESS')
             print('Server version: '+str(c.scalar(text('SHOW server_version'))))
-            count=c.scalar(text("SELECT count(*) FROM information_schema.tables WHERE table_schema='tura'"))
+            count=c.scalar(text("SELECT count(*) FROM information_schema.tables WHERE table_schema='public'"))
             print('Application tables: '+str(count))
         return True
     except Exception as exc:

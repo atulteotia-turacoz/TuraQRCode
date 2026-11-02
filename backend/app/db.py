@@ -7,7 +7,7 @@ from .config import settings
 
 
 class Base(DeclarativeBase):
-    metadata = MetaData(schema='tura', naming_convention={
+    metadata = MetaData(naming_convention={
         'ix': 'ix_%(table_name)s_%(column_0_name)s',
         'uq': 'uq_%(table_name)s_%(column_0_name)s',
         'ck': 'ck_%(table_name)s_%(constraint_name)s',

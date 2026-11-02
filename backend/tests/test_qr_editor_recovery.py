@@ -78,6 +78,6 @@ def test_thin_logo_normalization_preserves_minimum_dimensions_and_transparency()
 
 
 @pytest.mark.parametrize('text',['x'*25,'line\nbreak','<svg>☃</svg>'])
-def test_frame_caption_validation_still_rejects_unsupported_values(client,text):
+def test_frame_caption_validation_still_rejects_unsupported_values(client,text,member):
     response=client.post('/api/qr/preview',json={'content':{'url':'https://example.com'},'design':{'frame':'scan','frame_label':text}})
     assert response.status_code==422

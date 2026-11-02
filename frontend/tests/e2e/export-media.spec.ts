@@ -8,7 +8,7 @@ async function register(page:Page){
 
 test('export choices produce distinct exact square files with labels',async({page})=>{
  test.setTimeout(90000);
- await page.goto('/');await page.getByLabel('Website address').fill('https://example.com/square-exports');await page.getByRole('tab',{name:/Design/}).click();
+ await register(page);await page.goto('/app/create');await page.getByLabel('Code name').fill('Square exports');await page.getByLabel('Website address').fill('https://example.com/square-exports');await page.getByRole('button',{name:'Create QR code',exact:true}).click();await expect(page).toHaveURL(/\/app\/codes\//);await page.getByRole('tab',{name:/Design/}).click();
  await page.getByLabel('Text above the code').fill('WELCOME');await page.getByRole('group',{name:'Choose a text label'}).getByRole('button',{name:/Text below the code/}).click();await page.getByLabel('Text below the code').fill('SCAN ME');
  await page.locator('.qr-style-trigger').click();const palettes=page.locator('.qr-style-option');await expect(palettes.nth(0)).toHaveAttribute('aria-label',/^Classic black & white:/);await expect(palettes.nth(1)).toHaveAttribute('aria-label',/^Classic white on black:/);await page.getByLabel('Search QR palettes').fill('Spectrum gradient on white');await page.getByRole('button',{name:/^Spectrum gradient on white · linear:/}).click();await expect(page.getByAltText('Your QR code preview')).toBeVisible();
  for(const [size,px] of [['compact',256],['business_card',354],['high_res',3000]] as const){
@@ -18,9 +18,9 @@ test('export choices produce distinct exact square files with labels',async({pag
 });
 
 test('editor scroll continues onto the page after the inner panel reaches its end',async({page})=>{
- await page.goto('/');await page.getByLabel('Website address').fill('https://example.com/scroll');await page.getByRole('tab',{name:/Design/}).click();
- const editor=page.locator('.builder-body');await editor.scrollIntoViewIfNeeded();await editor.evaluate(element=>{element.scrollTop=element.scrollHeight;});
- const box=(await editor.boundingBox())!;await page.mouse.move(box.x+box.width/2,Math.min(box.y+box.height/2,700));const before=await page.evaluate(()=>scrollY);await page.mouse.wheel(0,600);await expect.poll(()=>page.evaluate(()=>scrollY)).toBeGreaterThan(before);
+ await page.setViewportSize({width:1280,height:520});await register(page);await page.goto('/app/create');await page.getByLabel('Website address').fill('https://example.com/scroll');await page.getByRole('tab',{name:/Design/}).click();
+ const editor=page.locator('.builder-body');await editor.scrollIntoViewIfNeeded();await editor.evaluate(element=>{element.scrollTop=element.scrollHeight;});await page.evaluate(()=>window.scrollTo(0,0));
+ const box=(await editor.boundingBox())!;await page.mouse.move(box.x+box.width/2,Math.min(box.y+box.height/2,700));const before=await page.evaluate(()=>scrollY);await expect.poll(async()=>{await page.mouse.wheel(0,300);await page.waitForTimeout(250);return page.evaluate(()=>scrollY);}).toBeGreaterThan(before);
 });
 
 test('business card images, experience and social profiles persist and delete from overview',async({page})=>{

@@ -1,0 +1,17 @@
+import {useState,type FormEvent} from 'react';
+import {Button,ErrorBox,Field,Loading,PageHeader,ResourceError,Success,useResource} from '../shared/ui';
+import {message,patch} from '../shared/api';
+
+type Gateway={id:string;label:string;enabled:boolean;mode:'test'|'live';public:Record<string,string>;secrets:Record<string,boolean>;required:string[];webhook_url:string|null;return_url:string};
+const labels:Record<string,string>={key_id:'Key ID',key_secret:'Key secret',webhook_secret:'Webhook secret',publishable_key:'Publishable key',secret_key:'Secret key',merchant_id:'Merchant ID',access_code:'Access code',working_key:'Working key'};
+
+function GatewayForm({gateway,onSaved}:{gateway:Gateway;onSaved:()=>void}){
+ const [error,setError]=useState('');const [saved,setSaved]=useState('');const [busy,setBusy]=useState(false);
+ async function submit(event:FormEvent<HTMLFormElement>){event.preventDefault();setBusy(true);setError('');setSaved('');const form=event.currentTarget;const f=new FormData(form);const read=(fields:string[])=>Object.fromEntries(fields.map(field=>[field,String(f.get(field)||'')]));try{await patch('/api/admin/gateways/'+gateway.id,{enabled:f.get('enabled')==='on',mode:f.get('mode')||gateway.mode,public:read(Object.keys(gateway.public)),secrets:read(Object.keys(gateway.secrets))});setSaved(gateway.label+' settings saved.');form.querySelectorAll<HTMLInputElement>('input[type=password]').forEach(input=>{input.value='';});onSaved();}catch(e){setError(message(e));}finally{setBusy(false);}}
+ return <section className="panel"><form onSubmit={submit}><div className="saas-switch"><h2>{gateway.label}</h2><label className="toggle"><input name="enabled" type="checkbox" defaultChecked={gateway.enabled}/><i/>Enabled</label></div><ErrorBox error={error}/>{saved&&<Success>{saved}</Success>}<div className="form-grid">
+  {Object.entries(gateway.public).map(([field,value])=><Field key={field} label={labels[field]+(gateway.required.includes(field)?' *':'')}><input name={field} maxLength={512} autoComplete="off" defaultValue={value}/></Field>)}
+  {Object.entries(gateway.secrets).map(([field,present])=><Field key={field} label={labels[field]+(gateway.required.includes(field)?' *':'')} hint={present?'Saved. Leave blank to keep it.':'Stored encrypted and never shown again.'}><input name={field} type="password" maxLength={512} autoComplete="new-password"/></Field>)}
+  {gateway.id==='ccavenue'&&<Field label="Environment"><select name="mode" defaultValue={gateway.mode}><option value="test">Test</option><option value="live">Live</option></select></Field>}
+ </div>{gateway.webhook_url&&<p className="sublabel">Webhook URL for your {gateway.label} dashboard<span className="gateway-url">{gateway.webhook_url}</span></p>}{gateway.id==='ccavenue'&&<p className="sublabel">Redirect and cancel URL for CCAvenue<span className="gateway-url">{gateway.return_url}</span></p>}<div className="form-actions"><Button busy={busy}>Save {gateway.label}</Button></div></form></section>;
+}
+export default function GatewaysPage(){const r=useResource<{items:Gateway[]}>('/api/admin/gateways');return <><PageHeader title="Payment gateways" description="Connect the providers customers can pay with. Only enabled gateways appear at checkout."/>{r.error?<ResourceError error={r.error} retry={r.reload}/>:!r.data?<Loading/>:r.data.items.map(gateway=><GatewayForm key={gateway.id} gateway={gateway} onSaved={r.reload}/>)}</>;}
