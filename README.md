@@ -217,7 +217,7 @@ The customer and administrator apps keep their own UI primitives so each builds 
 | Accounts | Login, logout, profile-name changes, password change, session expiry/revocation, recovery request, single-use expiring reset links |
 | Administrator | Platform counts, account/code search and pagination, account suspension/restoration, code pause/activation, confidential recovery links, account/admin audit history |
 | Administrator protection | Server-only bootstrap, Argon2id password hashes, mandatory initial password change, backend role checks; administrator accounts cannot be suspended from the panel |
-| Data protection | Owner access checks, private PostgreSQL schema/RLS, HttpOnly SameSite session cookies, Origin checks, request/content/logo validation, single-process rate limits, TLS for remote PostgreSQL |
+| Data protection | Owner access checks, PostgreSQL RLS, HttpOnly SameSite session cookies, Origin checks, request/content/logo validation, single-process rate limits, TLS for remote PostgreSQL |
 | Deployment configuration | Configured branded link hostname via PUBLIC_BASE_URL; normalized exact web origins; read-only production URL preflight; optional SMTP recovery email |
 
 ### Important behavior and limits
@@ -239,7 +239,7 @@ For a fresh production installation, use a separate empty database and configure
 | Route | Page | Access |
 |---|---|---|
 | `/` | Product home and public static QR generator | Public |
-| `/barcode-generator` | Public barcode generator and exports | Public |
+| `/barcode-generator` | Redirects to the signed-in barcode builder | Signed-in |
 | `/login` | Sign in | Public/account access |
 | `/register` | Sign up and required legal acceptance | Public/account access |
 | `/forgot-password` | Recovery instructions | Public/account access |
