@@ -54,3 +54,17 @@ export function AnalyticsPage(){
 
 export function CreateLinkPage(){return <><PageHeader eyebrow="LINK MANAGEMENT" title="Create a short link" description="A shorter address. A stronger connection."/><CodeBuilder linkOnly/></>;}
 export function CreateBarcodePage(){return <><PageHeader eyebrow="BARCODE STUDIO" title="Create a barcode" description="Professional labels in the format you need."/><BarcodeBuilder/></>;}
+
+export function ProjectDetailPage(){
+ const {id=''}=useParams();const [page,setPage]=useState(1);const projects=useResource<Project[]>('/api/projects');
+ const r=useResource<Page<Code>>('/api/codes?'+new URLSearchParams({project_id:id,page:String(page)}),true);
+ const project=projects.data?.find(p=>p.id===id);
+ if(projects.error)return <ResourceError error={projects.error} retry={projects.reload}/>;
+ if(projects.loading&&!projects.data)return <Loading/>;
+ if(!project)return <section className="panel"><Empty icon={<FolderOpen size={26}/>} heading="This project could not be found" action={<Link className="button" to="/app/projects">Back to projects</Link>}>It may have been deleted.</Empty></section>;
+ function updateRow(updated:Code){r.setData(current=>current?{...current,items:current.items.map(item=>item.id===updated.id?updated:item)}:current);}
+ async function deleteRow(deleted:Code){r.setData(current=>current?{...current,items:current.items.filter(item=>item.id!==deleted.id),total:Math.max(0,current.total-1)}:current);projects.reload();if(r.data?.items.length===1&&page>1)setPage(page-1);else r.reload();}
+ return <><p className="back-row"><Link to="/app/projects" className="text-link">← All projects</Link></p><PageHeader eyebrow={project.is_default?'DEFAULT PROJECT':'PROJECT'} title={project.name} description={number(project.total_codes)+' '+(project.total_codes===1?'connection':'connections')+' in this project.'} action={<Link to={'/app/analytics?project='+project.id} className="button secondary"><BarChart3 size={16}/>View analytics</Link>}/>
+ <div className="inline-actions project-category-links"><Link to={'/app/codes?project='+project.id} className="text-link">QR codes only<ArrowUpRight size={16}/></Link><Link to={'/app/links?project='+project.id} className="text-link">Short links only<ArrowUpRight size={16}/></Link><Link to={'/app/barcodes?project='+project.id} className="text-link">Barcodes only<ArrowUpRight size={16}/></Link></div>
+ <section className="panel">{r.error?<ResourceError error={r.error} retry={r.reload}/>:r.loading&&!r.data?<Loading/>:r.data?.items.length?<><CodeTable items={r.data.items} onUpdate={updateRow} onDelete={deleteRow}/><div className="pagination"><span>{r.data.total} {r.data.total===1?'connection':'connections'}</span><div><Button className="secondary small" disabled={r.loading||r.data.page<=1} onClick={()=>setPage(Math.max(1,r.data!.page-1))}>Previous</Button><span>Page {r.data.page}</span><Button className="secondary small" disabled={r.loading||r.data.page*r.data.limit>=r.data.total} onClick={()=>setPage(r.data!.page+1)}>Next</Button></div></div></>:<Empty icon={<FolderOpen size={26}/>} heading="Nothing in this project yet" action={<Link className="button" to="/app/create">Create a QR code</Link>}>Choose this project when you create or edit a code, short link or barcode.</Empty>}</section></>;
+}
