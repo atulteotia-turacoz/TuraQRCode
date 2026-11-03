@@ -125,6 +125,8 @@ input,select,textarea{font-weight:400}input::placeholder,textarea::placeholder{f
 .project-title-link{color:var(--ink);text-decoration:none}.project-title-link::after{content:'';position:absolute;inset:0;z-index:0}.project-title-link:hover{color:var(--accent)}
 .project-card-top button,.project-card-top a,.project-category-links a{position:relative;z-index:1}
 .back-row{margin:0 0 6px;font-size:13px}
+/* Wide content scrolls inside its own box; the workspace itself never scrolls sideways under the fixed sidebar. */
+.workspace,.admin-workspace{min-width:0;overflow-x:clip}
 /* Public site */
 .lp-header{position:sticky;top:0;z-index:20;height:52px;background:var(--paper);border-bottom:1px solid var(--hairline);display:flex;align-items:center;gap:26px;padding:0 30px}
 .lp-header nav{display:flex;gap:20px;min-width:0;overflow:hidden;white-space:nowrap}.lp-header nav a{font-size:13.5px;color:var(--ink-2)}.lp-header nav a:hover{color:var(--ink);text-decoration:none}

@@ -119,6 +119,8 @@ input,select,textarea{font-weight:400}input::placeholder,textarea::placeholder{f
 .name-cell>span{min-width:0}.name-cell strong{overflow-wrap:anywhere}
 .name-cell small{display:block;max-width:min(240px,15vw);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media(max-width:640px){.name-cell small{max-width:60vw}}
+/* Wide content scrolls inside its own box; the workspace itself never scrolls sideways under the fixed sidebar. */
+.workspace,.admin-workspace{min-width:0;overflow-x:clip}
 /* Administration */
 .admin-shell{background:var(--paper)}
 .admin-sidebar-note{display:none}
