@@ -1,6 +1,7 @@
 import base64
 import binascii
 import io
+import re
 from urllib.parse import quote, urlencode
 import qrcode
 from PIL import Image, ImageOps, UnidentifiedImageError
@@ -94,7 +95,7 @@ def payload(kind, c):
         number=''.join(char for char in c['phone'] if char.isdigit())
         return 'https://wa.me/' + number + (('?'+urlencode({'text':c['message']}) if c.get('message') else ''))
     if kind == 'text': return c['text']
-    if kind == 'phone': return 'tel:' + c['phone']
+    if kind == 'phone': return 'tel:' + re.sub(r'[^\d+]', '', c['phone'])
     if kind == 'email':
         return 'mailto:' + quote(c['email'], safe='@.') + '?' + urlencode({k:c[k] for k in ('subject','body') if c.get(k)}, quote_via=quote)
     if kind == 'sms': return 'SMSTO:' + c['phone'] + ':' + c.get('message','')

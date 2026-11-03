@@ -8,7 +8,11 @@ import type {User} from './types';
 
 export function Brand({inverse=false}:{inverse?:boolean}){return <Link to="/" className={'brand '+(inverse?'inverse':'')} aria-label="TuraQRcode home"><span>Tura<span className="brand-accent">QRcode</span></span><small>Admin</small></Link>;}
 export function Button({children,busy=false,...props}:React.ButtonHTMLAttributes<HTMLButtonElement>&{busy?:boolean}){return <button {...props} disabled={busy||props.disabled} className={'button '+(props.className||'')}>{busy?<LoaderCircle size={17} className="spin"/>:null}{children}</button>;}
-export function ErrorBox({error}:{error?:string|null}){return error?<div className="notice error" role="alert"><AlertCircle size={18}/><span>{error}</span></div>:null;}
+export function ErrorBox({error}:{error?:string|null}){
+ // Long forms scroll; bring a new message into view so it is never missed below the fold.
+ const ref=useRef<HTMLDivElement>(null);useEffect(()=>{if(error)ref.current?.scrollIntoView({block:'nearest',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});},[error]);
+ return error?<div ref={ref} className="notice error" role="alert"><AlertCircle size={18}/><span>{error}</span></div>:null;
+}
 export function Success({children}:{children:ReactNode}){return <div className="notice success" role="status"><Check size={18}/><span>{children}</span></div>;}
 export function Field({label,children,hint}:{label:string;children:ReactNode;hint?:string}){
  const id=useId();

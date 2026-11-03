@@ -1,3 +1,4 @@
+import re
 import secrets
 from html import escape
 from pathlib import Path
@@ -142,7 +143,7 @@ def public_profile(slug:str,db:Session=Depends(get_db)):
     if card.email:
         contacts.append(f'<a class="contact-link" href="mailto:{e(card.email)}"><span class="contact-icon">✉</span><span><small>EMAIL</small>{e(card.email)}</span></a>')
     if card.phone:
-        contacts.append(f'<a class="contact-link" href="tel:{e(card.phone)}"><span class="contact-icon">☎</span><span><small>PHONE</small>{e(card.phone)}</span></a>')
+        contacts.append(f'<a class="contact-link" href="tel:{e(re.sub(r'[^\d+]', '', card.phone))}"><span class="contact-icon">☎</span><span><small>PHONE</small>{e(card.phone)}</span></a>')
     if card.website:
         contacts.append(f'<a class="contact-link" href="{e(card.website)}" target="_blank" rel="noopener noreferrer"><span class="contact-icon">↗</span><span><small>WEBSITE</small>{e(card.website)}</span></a>')
     if card.address:

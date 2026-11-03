@@ -9,6 +9,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from .config import settings
 from .db import engine
 from .security import ADMIN_COOKIE, APP_HEADER, COOKIE
+from .schemas import friendly_error
 from . import routes_auth, routes_codes, routes_cards, routes_admin, routes_billing, routes_saas_admin
 
 app=FastAPI(title='TuraQRcode API',version='1.0.0',description='Turacoz QR and short-link service',docs_url='/api/docs',openapi_url='/api/openapi.json')
@@ -48,7 +49,7 @@ async def security_headers(request:Request,call_next):
 @app.exception_handler(RequestValidationError)
 async def invalid(request,exc):
     # Validation input may contain passwords. Return messages only.
-    errors=[{'field':'.'.join(str(x) for x in e['loc'][1:]),'message':e['msg'].removeprefix('Value error, ')} for e in exc.errors()]
+    errors=[{'field':'.'.join(str(x) for x in e['loc'][1:]),'message':friendly_error(e)} for e in exc.errors()]
     return JSONResponse({'detail':errors[0]['message'] if errors else 'Please check your information.','errors':errors},422)
 
 

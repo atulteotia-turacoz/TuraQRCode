@@ -82,6 +82,44 @@ input,select,textarea{font-weight:400}input::placeholder,textarea::placeholder{f
 .preview-upsell{background:var(--well);border:1px solid var(--hairline)}
 .qr-custom-colors{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}.qr-custom-colors .field{margin:0}.color-field input[type=color]{width:44px;height:36px;padding:2px;cursor:pointer;flex:none}
 .brand small,.brand.inverse small,.sidebar .brand small{color:var(--ink-2)!important;font-size:11px;letter-spacing:.04em;opacity:1}
+.button:disabled,.button[disabled],button:disabled{opacity:.4!important;cursor:not-allowed;pointer-events:none;box-shadow:none}
+/* Positioned so hidden screen-reader labels inside tables cannot widen the page. */
+.table-wrap{overflow-x:auto;max-width:100%;position:relative}
+/* Compact navigation keeps every link visible on shorter screens; the scrollbar stays visible on light and dark. */
+.sidebar-nav{gap:4px!important;padding-bottom:8px!important;scrollbar-color:var(--hairline-dark) transparent!important}
+.sidebar-group{gap:0!important}
+.sidebar-link{padding:7px 20px!important}
+.sidebar-label{padding:10px 20px 4px!important}
+.sidebar-brand{margin-bottom:4px!important}
+@media(max-height:760px){.sidebar-link{padding:5px 20px!important}.sidebar-label{padding:8px 20px 2px!important}}
+@media(max-width:1280px){table td,table th{padding:12px 7px}.name-cell{min-width:130px}.cell-actions{flex-wrap:nowrap}.hide-medium{display:none}}
+/* Tablets use the slide-in menu so tables keep their full width. */
+@media(min-width:761px) and (max-width:900px){
+ .sidebar{transform:translateX(-100%);transition:transform .2s;width:242px!important}
+ .sidebar.open{transform:translateX(0)}
+ .mobile-only{display:inline-flex!important}
+ .sidebar-scrim{position:fixed;inset:0;z-index:25;background:#1C1B1A70;border:0;display:block}
+ .workspace,.admin-workspace{margin-left:0!important;width:100%!important}
+}
+/* Phones: each table row becomes a labelled card, so every value and action stays on screen. */
+@media(max-width:640px){
+ .table-wrap{overflow-x:visible}
+ .table-wrap table,.table-wrap tbody,.table-wrap tr,.table-wrap td{display:block;width:100%}
+ .table-wrap thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+ .table-wrap tr{border:1px solid var(--hairline);background:var(--card);padding:10px 12px;margin:0 0 10px}
+ .table-wrap td{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:5px 0!important;border:0!important;text-align:right;white-space:normal}
+ .table-wrap td[data-label]::before{content:attr(data-label);flex:none;color:var(--ink-3);font-size:12px;text-align:left}
+ .table-wrap td:is([data-label^="Name"],[data-label="Account"]:first-child,[data-label="Plan"]:first-child){display:block;text-align:left;padding-bottom:8px!important}
+ .table-wrap td:is([data-label^="Name"],[data-label="Account"]:first-child,[data-label="Plan"]:first-child)::before{display:none}
+ .table-wrap td:not([data-label]){justify-content:flex-end}
+ .table-wrap td:not([data-label]):has(input[type=checkbox]){justify-content:flex-start;padding-bottom:0!important}
+ .table-wrap .cell-actions{flex-wrap:wrap;justify-content:flex-end}
+ .table-wrap .hide-medium{display:flex}
+ .admin-header .badge{display:none}
+}
+.name-cell>span{min-width:0}.name-cell strong{overflow-wrap:anywhere}
+.name-cell small{display:block;max-width:min(240px,15vw);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:640px){.name-cell small{max-width:60vw}}
 /* Public site */
 .lp-header{position:sticky;top:0;z-index:20;height:52px;background:var(--paper);border-bottom:1px solid var(--hairline);display:flex;align-items:center;gap:26px;padding:0 30px}
 .lp-header nav{display:flex;gap:20px;min-width:0;overflow:hidden;white-space:nowrap}.lp-header nav a{font-size:13.5px;color:var(--ink-2)}.lp-header nav a:hover{color:var(--ink);text-decoration:none}

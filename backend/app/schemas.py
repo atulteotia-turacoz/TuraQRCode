@@ -17,6 +17,32 @@ def validate_expiry(value):
     return value
 
 
+LABELS = {'url': 'website address', 'alias': 'custom alias', 'name': 'name', 'email': 'email address', 'password': 'password',
+          'mobile_url': 'mobile destination', 'expires_at': 'expiry date', 'phone': 'phone number', 'project_id': 'project'}
+
+
+def friendly_error(error: dict) -> str:
+    """Turns a validation error into a sentence a person can act on."""
+    message = str(error.get('msg', '')).removeprefix('Value error, ')
+    if error.get('type') in ('value_error', 'assertion_error'):
+        return message
+    field = next((str(part) for part in reversed(error.get('loc', ())) if isinstance(part, str)), '')
+    label = LABELS.get(field, field.replace('_', ' ') or 'this field')
+    context = error.get('ctx') or {}
+    kind = error.get('type', '')
+    if kind == 'missing':
+        return f'Please enter the {label}.'
+    if kind == 'string_too_short':
+        return f'The {label} needs at least {context.get("min_length")} characters.'
+    if kind == 'string_too_long':
+        return f'The {label} can be at most {context.get("max_length")} characters.'
+    if kind == 'string_pattern_mismatch':
+        return f'The {label} contains characters that are not allowed.'
+    if kind in ('too_short', 'too_long'):
+        return f'Check the number of items in the {label}.'
+    return f'Please check the {label}.'
+
+
 class Input(BaseModel):
     model_config = ConfigDict(extra='forbid')
 
@@ -257,6 +283,13 @@ class CodeCreate(Input):
     alias: str | None = Field(default=None, min_length=3, max_length=64, pattern=r'^[a-zA-Z0-9][a-zA-Z0-9_-]*$')
     project_id: str | None = Field(default=None, max_length=36)
     expires_at: datetime | None = None
+
+    @field_validator('alias', mode='before')
+    @classmethod
+    def readable_alias(cls, value):
+        if isinstance(value, str) and value.strip() and not re.fullmatch(r'[a-zA-Z0-9][a-zA-Z0-9_-]{2,63}', value.strip()):
+            raise ValueError('Use 3–64 letters, numbers, hyphens or underscores for the custom alias, starting with a letter or number.')
+        return value
     password: str | None = Field(default=None, min_length=6, max_length=128)
     mobile_url: str | None = None
 

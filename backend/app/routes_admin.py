@@ -1,3 +1,4 @@
+import re
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import select, func
 from sqlalchemy.orm import Session
@@ -8,6 +9,7 @@ from .security import admin_user, public_user, audit, revoke_sessions, throttle
 from .routes_auth import new_reset
 
 router=APIRouter(prefix='/api/admin',tags=['Administration'])
+UUID=re.compile(r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}')
 
 
 @router.get('/overview')
@@ -66,11 +68,14 @@ def moderate(code_id:str,data:AdminUserUpdate,actor:User=Depends(admin_user),db:
     code=db.get(Code,code_id)
     if not code: raise HTTPException(404,'This item could not be found.')
     code.is_active=data.is_active
-    audit(db,actor,'admin.code_activated' if data.is_active else 'admin.code_paused',code.id)
+    audit(db,actor,'admin.code_activated' if data.is_active else 'admin.code_paused',code.name)
     db.commit(); return {'id':code.id,'is_active':code.is_active}
 
 
 @router.get('/audit')
 def logs(page:int=Query(1,ge=1),actor:User=Depends(admin_user),db:Session=Depends(get_db)):
-    rows=db.execute(select(Audit,User.email).outerjoin(User,Audit.actor_id==User.id).order_by(Audit.created_at.desc()).offset((page-1)*30).limit(30))
-    return {'items':[{'id':a.id,'actor':email,'action':a.action,'target':a.target,'created_at':a.created_at} for a,email in rows], 'total':db.scalar(select(func.count()).select_from(Audit))}
+    rows=db.execute(select(Audit,User.email).outerjoin(User,Audit.actor_id==User.id).order_by(Audit.created_at.desc()).offset((page-1)*30).limit(30)).all()
+    # Older entries stored a code's id; show its name when the code still exists.
+    ids=[a.target for a,_ in rows if UUID.fullmatch(a.target or '')]
+    names=dict(db.execute(select(Code.id,Code.name).where(Code.id.in_(ids))).all()) if ids else {}
+    return {'items':[{'id':a.id,'actor':email,'action':a.action,'target':names.get(a.target,a.target),'created_at':a.created_at} for a,email in rows], 'total':db.scalar(select(func.count()).select_from(Audit))}

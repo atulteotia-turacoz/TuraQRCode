@@ -17,8 +17,8 @@ from sqlalchemy.orm import Session
 from .config import settings
 from .db import get_db
 from .models import BusinessCard, Code, Project, Event, User, now
-from .schemas import CodeCreate, CodeUpdate, Preview, ProjectInput, validate_content, valid_url
-from .security import current_user, ready_user, passwords, verify, throttle
+from .schemas import CodeCreate, CodeUpdate, Preview, ProjectInput, friendly_error, validate_content, valid_url
+from .security import audit, current_user, ready_user, passwords, verify, throttle
 from .qr import payload, render_code
 from .projects import default_project
 from .billing import require_quota
@@ -112,7 +112,8 @@ def bulk(data:BulkInput,request:Request,user:User=Depends(ready_user),db:Session
                 code=add_code(db,item,user)
                 result=code_json(db,code,0)
             results.append({'row':number,'success':True,'code':result})
-        except (ValidationError,ValueError): results.append({'row':number,'success':False,'error':'Check the name, content, and link options for this row.'})
+        except ValidationError as e: results.append({'row':number,'success':False,'error':friendly_error(e.errors()[0]) if e.errors() else 'Check the name, content, and link options for this row.'})
+        except ValueError as e: results.append({'row':number,'success':False,'error':str(e) or 'Check the name, content, and link options for this row.'})
         except (IntegrityError,HTTPException) as e:
             results.append({'row':number,'success':False,'error':e.detail if isinstance(e,HTTPException) else 'This custom alias is already in use.'})
     db.commit()
@@ -153,6 +154,8 @@ def update_code(code_id:str,data:CodeUpdate,user:User=Depends(ready_user),db:Ses
         pwd=values.pop('password')
         if pwd and len(pwd)<6: raise HTTPException(422,'Use at least 6 characters for the access password.')
         code.password_hash=passwords.hash(pwd) if pwd else None
+    if 'is_active' in values and values['is_active']!=code.is_active:
+        audit(db,user,'code.activated' if values['is_active'] else 'code.paused',code.name)
     for k,v in values.items(): setattr(code,k,v)
     db.commit()
     return code_json(db,code)
@@ -298,7 +301,7 @@ def analytics_export(days:int=Query(30,ge=1,le=365),code_id:str|None=None,projec
 
 
 def html_page(title,body,brand=True):
-    return '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+escape(title)+' · TuraQRcode</title><style>body{font:16px system-ui;background:#f3f6fc;color:#163b75;margin:0;padding:40px 20px}main{max-width:420px;margin:8vh auto;background:white;padding:36px;border:1px solid #dce5f3;border-radius:20px}label{display:block;margin:20px 0 8px}input,button{box-sizing:border-box;width:100%;padding:14px;font:inherit;border:1px solid #afc1db;border-radius:8px}button,a.action{background:#2563eb;color:white;border:0;margin-top:16px;cursor:pointer}a{color:#2563eb}small{display:block;color:#52657e;margin-top:28px}</style><main>'+body+('<small>TuraQRcode by Turacoz</small>' if brand else '')+'</main></html>'
+    return '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+escape(title)+' · TuraQRcode</title><style>:root{color-scheme:light dark}body{font:15px/1.55 \"IBM Plex Sans\",system-ui,sans-serif;background:#FCFCFA;color:#1C1B1A;margin:0;padding:40px 20px}main{max-width:420px;margin:8vh auto;background:#fff;padding:32px;border:1px solid #E5E2DC}h1{font:600 24px \"Source Serif 4\",Georgia,serif;margin:0 0 10px}p{color:#6E6A64}label{display:block;margin:20px 0 8px;color:#6E6A64}input,button{box-sizing:border-box;width:100%;padding:12px;font:inherit;border:1px solid #C9C4BC;background:#fff;color:inherit}button,a.action{background:#9E2B25;color:#fff;border:0;margin-top:16px;cursor:pointer}a{color:#9E2B25}small{display:block;color:#716C64;margin-top:28px}@media(prefers-color-scheme:dark){body{background:#141413;color:#EDEAE4}main,input{background:#1F1E1C;border-color:#3D3B37}p,label{color:#A29C93}small{color:#938D84}button,a.action{background:#D96A63;color:#141413}a{color:#D96A63}}</style><main>'+body+('<small>TuraQRcode by Turacoz</small>' if brand else '')+'</main></html>'
 
 
 def public_code(db,slug):
