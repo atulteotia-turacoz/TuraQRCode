@@ -201,6 +201,18 @@ Not for the recommended same-origin proxy deployment. Leave `VITE_API_URL` unset
 
 If you deliberately use an external API origin, set `VITE_API_URL` in each app's private build environment and rebuild that app. Any `VITE_*` value is bundled into public JavaScript. Never put database passwords, SMTP credentials, bootstrap passwords, service-role keys, or other secrets in frontend/admin environment variables. `API_PROXY_TARGET` is for Vite development only and does not configure production Nginx.
 
+
+### Administration under a path of the customer domain
+
+To serve administration at `https://qrcode.example.com/admin/` instead of its own domain, build or start the admin app with `ADMIN_BASE_PATH=/admin/` (for example `ADMIN_BASE_PATH=/admin/ npm run build`). Then route `/admin/` on the customer site to the admin app, before the customer app's catch-all `location /`:
+
+```nginx
+# Built files
+location /admin/ { alias /home/tura/apps/TuraQRcode/admin/dist/; try_files $uri $uri/ /admin/index.html; }
+```
+
+The customer and admin apps then share one hostname. They keep separate sign-in sessions, so signing in to one does not sign out the other.
+
 ## 7. Check PostgreSQL and apply migrations
 
 ```bash

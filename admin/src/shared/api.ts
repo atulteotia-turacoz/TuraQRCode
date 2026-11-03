@@ -1,4 +1,5 @@
-export const API = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+// Request paths already start with /api, so an origin ending in /api would double it.
+export const API = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '').replace(/\/api$/, '');
 // Tells the API to use the administration session, kept apart from the customer app's.
 const APP={'X-Tura-App':'admin'};
 export class ApiError extends Error { constructor(message:string,public status:number){super(message);} }
